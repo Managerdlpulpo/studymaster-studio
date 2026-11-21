@@ -1,0 +1,3354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyMaster Studio - Tu Entorno de Estudio Adaptativo</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        bio: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        science: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos base y tipografía */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        /* Efecto 3D para las tarjetas (Flashcards) */
+        .perspective {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .backface-hidden {
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+
+        /* Barra de desplazamiento personalizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Ocultar scrollbar horizontal en barra de pestañas móvil */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Efecto hover en nodos del diagrama de flujo */
+        .flow-node {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .flow-node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Animación suave de entrada */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.25s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- ===================================================================== -->
+    <!-- BANNER SUPERIOR, GAMIFICACIÓN Y NAVEGACIÓN DE PESTAÑAS                -->
+    <!-- ===================================================================== -->
+    <header class="bg-gradient-to-r from-bio-800 via-bio-700 to-teal-800 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-md border border-white/20">
+                    <i class="fa-solid fa-wand-magic-sparkles text-2xl text-bio-200"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight sm:text-2xl flex items-center gap-2">
+                        StudyMaster <span class="bg-bio-500 text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wider font-bold text-slate-900">Studio</span>
+                    </h1>
+                    <p id="header-subject-subtitle" class="text-xs text-bio-100 font-medium">
+                        Carga tus apuntes para generar actividades interactivas al instante
+                    </p>
+                </div>
+            </div>
+
+            <!-- Barra de Gamificación (XP, Nivel y Reinicio seguro) -->
+            <div class="flex items-center gap-3 sm:gap-4 bg-black/20 px-4 py-2 rounded-2xl backdrop-blur-sm border border-white/10 text-sm">
+                <div class="flex items-center gap-1.5" title="Puntos de Experiencia acumulados">
+                    <i class="fa-solid fa-star text-amber-400"></i>
+                    <span id="xp-display" class="font-bold text-amber-300">0</span> <span class="text-xs text-slate-300">XP</span>
+                </div>
+                <div class="h-4 w-px bg-white/20"></div>
+                <div class="flex items-center gap-1.5" title="Nivel actual (sube cada 100 XP)">
+                    <i class="fa-solid fa-trophy text-yellow-400"></i>
+                    <span class="text-xs text-slate-200">Nivel <strong id="level-display" class="text-white">1</strong></span>
+                </div>
+                <div class="h-4 w-px bg-white/20"></div>
+                <button id="reset-stats-btn" type="button" onclick="handleResetStats()" class="text-xs text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white/10" title="Reiniciar XP y progreso de estudio">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span id="reset-stats-label" class="hidden sm:inline">Reiniciar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Barra de Navegación (7 Pestañas) -->
+        <nav class="bg-bio-900/60 border-t border-white/10 px-4 sm:px-8">
+            <div class="max-w-7xl mx-auto flex overflow-x-auto gap-2 py-2 no-scrollbar" id="nav-tabs">
+                <button type="button" onclick="switchTab('cargar')" id="tab-btn-cargar" class="tab-btn active px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 bg-white/15 text-white shadow-sm">
+                    <i class="fa-solid fa-file-import text-bio-200"></i> 📥 Cargar Apuntes
+                </button>
+                <button type="button" onclick="switchTab('apuntes')" id="tab-btn-apuntes" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-slate-200 hover:bg-white/5">
+                    <i class="fa-solid fa-book-open text-bio-300"></i> 📚 Apuntes y Esquemas
+                </button>
+                <button type="button" onclick="switchTab('flashcards')" id="tab-btn-flashcards" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-slate-200 hover:bg-white/5">
+                    <i class="fa-solid fa-layer-group text-amber-400"></i> 🗂️ Tarjetas Flashcards
+                </button>
+                <button type="button" onclick="switchTab('definiciones')" id="tab-btn-definiciones" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-slate-200 hover:bg-white/5">
+                    <i class="fa-solid fa-pen-nib text-cyan-300"></i> ✍️ Rellenar Definiciones
+                </button>
+                <button type="button" onclick="switchTab('abiertas')" id="tab-btn-abiertas" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-slate-200 hover:bg-white/5">
+                    <i class="fa-solid fa-keyboard text-rose-300"></i> ⌨️ Preguntas sin Opciones
+                </button>
+                <button type="button" onclick="switchTab('juegos')" id="tab-btn-juegos" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-slate-200 hover:bg-white/5">
+                    <i class="fa-solid fa-gamepad text-purple-400"></i> 🧩 Juegos de Práctica
+                </button>
+                <button type="button" onclick="switchTab('examen')" id="tab-btn-examen" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-slate-200 hover:bg-white/5">
+                    <i class="fa-solid fa-pen-to-square text-emerald-400"></i> 📝 Simulacro Nivel 10
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Notificación flotante (Toast) sin usar alert() -->
+    <div id="toast-banner" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2.5 animate-fade-in">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-bio-400 text-sm"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- CONTENEDOR PRINCIPAL                                                  -->
+    <!-- ===================================================================== -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- ================================================================= -->
+        <!-- PESTAÑA 1: CARGAR APUNTES Y GESTOR DE TEMARIOS                    -->
+        <!-- ================================================================= -->
+        <section id="tab-cargar" class="tab-content space-y-6">
+
+            <!-- Resumen de actividades generadas (oculto hasta que se procesen apuntes) -->
+            <div id="generation-summary-banner" class="hidden bg-gradient-to-r from-bio-50 via-emerald-50 to-teal-50 border border-bio-200 p-4 sm:p-5 rounded-2xl shadow-sm animate-fade-in">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="space-y-1">
+                        <div class="text-xs font-extrabold uppercase tracking-wider text-bio-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-check text-bio-600"></i> ¡Actividades generadas y listas para estudiar!
+                        </div>
+                        <p id="generation-stats-text" class="text-xs sm:text-sm text-slate-700 font-medium"></p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="openEditorModal()" class="bg-white hover:bg-slate-50 text-slate-800 font-bold px-3.5 py-2 rounded-xl text-xs border border-slate-300 shadow-sm transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-sliders text-science-600"></i> 🛠️ Revisar y Editar Ítems Generados
+                        </button>
+                        <button type="button" onclick="switchTab('apuntes')" class="bg-bio-600 hover:bg-bio-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm transition-all flex items-center gap-1.5">
+                            Empezar a estudiar <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Columna Principal: Editor de Apuntes (8 cols) -->
+                <div class="lg:col-span-8 bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-200 space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-file-lines text-bio-600"></i> Estudio de Creación de Apuntes
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">
+                                Pega tus apuntes, resúmenes o esquemas de cualquier asignatura y pulsa Generar.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="button" onclick="loadDemoNotes()" class="text-xs font-semibold text-science-600 hover:text-science-700 underline underline-offset-2 transition-colors">
+                                Cargar texto de demostración
+                            </button>
+                            <span class="text-slate-300">|</span>
+                            <button type="button" id="clear-all-btn" onclick="handleClearAll()" class="text-xs font-semibold text-slate-500 hover:text-red-600 transition-colors">
+                                Limpiar todo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Campo Título de la Asignatura o Tema -->
+                    <div class="space-y-1.5">
+                        <label for="subject-title-input" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                            Título de la asignatura o tema
+                        </label>
+                        <input type="text" id="subject-title-input"
+                            placeholder="Ej. Historia - La Edad Media, Biología - La Célula, Lengua..."
+                            class="w-full px-4 py-2.5 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-bio-500 focus:bg-white transition-all" />
+                    </div>
+
+                    <!-- Área de Texto Amplia para Apuntes -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label for="notes-textarea" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                Contenido de tus apuntes o esquema
+                            </label>
+                            <span id="char-count-indicator" class="text-[11px] text-slate-400 font-medium">0 caracteres</span>
+                        </div>
+                        <textarea id="notes-textarea"
+                            rows="12"
+                            oninput="updateCharCount()"
+                            placeholder="Escribe o pega aquí tus apuntes...&#10;&#10;Puedes usar párrafos normales o esquemas como:&#10;# TEMA 1: LA CÉLULA&#10;Mitocondria: orgánulo encargado de obtener energía mediante la respiración celular.&#10;Fases del proceso: Captación → Transformación → Liberación de energía."
+                            class="w-full p-4 text-xs sm:text-sm text-slate-800 bg-slate-50 border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-bio-500 focus:bg-white transition-all leading-relaxed font-normal"></textarea>
+                    </div>
+
+                    <!-- Barra de Acciones Principales -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- Input oculto para subir archivos -->
+                            <input type="file" id="file-upload-input" accept=".txt,.md,.csv,.json" class="hidden" onchange="handleFileUpload(event)" />
+                            <button type="button" onclick="document.getElementById('file-upload-input').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl text-xs border border-slate-300 transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-upload text-slate-600"></i> Subir archivo (.txt, .md, .csv, .json)
+                            </button>
+
+                            <button type="button" id="edit-items-btn" onclick="openEditorModal()" class="hidden bg-science-50 hover:bg-science-100 text-science-700 font-bold py-3 px-4 rounded-xl text-xs border border-science-200 transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-sliders"></i> 🛠️ Revisar y Editar Ítems
+                            </button>
+                        </div>
+
+                        <button type="button" onclick="processNotesAndGenerate()" class="w-full sm:w-auto bg-bio-600 hover:bg-bio-700 text-white font-extrabold py-3.5 px-6 rounded-2xl shadow-md hover:shadow-lg transition-all text-xs sm:text-sm flex items-center justify-center gap-2">
+                            <span>⚡ Generar Actividades de Estudio</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Columna Lateral: Trucos de Formato y Gestor de Temarios Guardados (4 cols) -->
+                <div class="lg:col-span-4 space-y-6">
+
+                    <!-- Guía Desplegable de Trucos -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                        <button type="button" onclick="toggleFormatGuide()" class="w-full p-5 text-left flex items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100/70 hover:to-orange-100/70 transition-colors">
+                            <span class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-lightbulb text-amber-500 text-base"></i> 💡 Trucos para que tus esquemas se detecten al 100%
+                            </span>
+                            <i id="guide-chevron" class="fa-solid fa-chevron-down text-slate-500 text-xs transition-transform"></i>
+                        </button>
+
+                        <div id="format-guide-body" class="p-5 text-xs text-slate-600 space-y-3 border-t border-amber-100">
+                            <p class="text-slate-700 font-medium">
+                                Aunque pegues <strong>párrafos normales sin formato</strong> el motor extraerá conceptos clave, si usas estas marcas la precisión será total:
+                            </p>
+                            <div class="space-y-2.5">
+                                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                    <strong class="text-slate-800 block mb-0.5"><i class="fa-solid fa-heading text-bio-600"></i> Bloques / Temas:</strong>
+                                    Usa <code class="bg-white px-1.5 py-0.5 rounded border text-bio-700"># Título</code>, <code class="bg-white px-1.5 py-0.5 rounded border text-bio-700">TEMA 1: ...</code> o líneas en <code class="bg-white px-1.5 py-0.5 rounded border text-bio-700">MAYÚSCULAS</code>.
+                                </div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                    <strong class="text-slate-800 block mb-0.5"><i class="fa-solid fa-book text-science-600"></i> Definiciones:</strong>
+                                    Escribe <code class="bg-white px-1.5 py-0.5 rounded border text-science-700">Concepto: definición</code>, <code class="bg-white px-1.5 py-0.5 rounded border text-science-700">Concepto - definición</code>, <code class="bg-white px-1.5 py-0.5 rounded border text-science-700">=</code> o verbos como <em>"es..."</em>, <em>"consiste en..."</em>.
+                                </div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                    <strong class="text-slate-800 block mb-0.5"><i class="fa-solid fa-diagram-project text-purple-600"></i> Secuencias y Procesos:</strong>
+                                    Listas numeradas (<code class="bg-white px-1.5 py-0.5 rounded border text-purple-700">1. Paso... 2. Paso...</code>) o cadenas con flechas (<code class="bg-white px-1.5 py-0.5 rounded border text-purple-700">Fase A → Fase B → Fase C</code>).
+                                </div>
+                                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                    <strong class="text-slate-800 block mb-0.5"><i class="fa-solid fa-highlighter text-amber-600"></i> Palabras clave prioritarias:</strong>
+                                    Rodea términos clave con <code class="bg-white px-1.5 py-0.5 rounded border text-amber-800">**doble asterisco**</code> para que se usen en los huecos y preguntas.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gestor de Temarios Guardados (localStorage & JSON) -->
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-folder-open text-bio-600"></i> Mis Temarios Guardados
+                            </h3>
+                            <span id="saved-decks-count" class="text-[11px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">0</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="saveCurrentDeck()" class="bg-bio-50 hover:bg-bio-100 text-bio-800 font-bold py-2.5 px-3 rounded-xl text-xs border border-bio-200 transition-colors flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-floppy-disk text-bio-600"></i> Guardar actual
+                            </button>
+                            <button type="button" onclick="exportCurrentDeckJSON()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs border border-slate-200 transition-colors flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-download text-slate-600"></i> Exportar .JSON
+                            </button>
+                        </div>
+
+                        <div id="saved-decks-list" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                            <!-- Renderizado dinámicamente desde localStorage -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- PESTAÑA 2: APUNTES Y ESQUEMAS INTERACTIVOS                        -->
+        <!-- ================================================================= -->
+        <section id="tab-apuntes" class="tab-content hidden space-y-6">
+            <div id="apuntes-empty-state" class="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 shadow-sm text-center max-w-xl mx-auto space-y-4">
+                <div class="w-16 h-16 bg-bio-100 text-bio-700 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-book-open"></i>
+                </div>
+                <h2 class="text-xl font-extrabold text-slate-800">Aún no has cargado ningún apunte</h2>
+                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                    Pega tus apuntes o sube un archivo en la pestaña inicial para visualizar aquí tus bloques organizados, conceptos clave y diagramas de flujo interactivos.
+                </p>
+                <button type="button" onclick="switchTab('cargar')" class="bg-bio-600 hover:bg-bio-700 text-white font-bold py-3 px-6 rounded-2xl text-xs sm:text-sm shadow-sm transition-all inline-flex items-center gap-2">
+                    <i class="fa-solid fa-file-import"></i> Ir a 📥 Cargar Apuntes
+                </button>
+            </div>
+
+            <div id="apuntes-active-content" class="hidden space-y-6">
+                <!-- Barra de filtros por bloque/tema detectado -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                    <div class="font-bold text-slate-700 text-xs sm:text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-filter text-bio-600"></i> Filtrar Bloque / Tema:
+                    </div>
+                    <div id="notes-filter-buttons" class="flex flex-wrap gap-2">
+                        <!-- Botones generados dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Diagrama de Flujo Interactivo (si se detectan secuencias) -->
+                <div id="flowchart-section" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-diagram-project text-science-600"></i> Diagrama de Flujo Interactivo
+                            </h3>
+                            <p class="text-xs text-slate-500">Haz clic en cada etapa del proceso para consultar su explicación detallada.</p>
+                        </div>
+                        <div id="flowchart-selector-wrapper" class="hidden">
+                            <select id="flowchart-sequence-select" onchange="renderSelectedFlowchart()" class="bg-slate-100 text-xs font-bold text-slate-700 px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-science-500">
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="flowchart-nodes-container" class="flex flex-wrap items-center gap-2 sm:gap-3 pt-1">
+                        <!-- Nodos renderizados dinámicamente -->
+                    </div>
+
+                    <div id="flow-info-box" class="p-4 rounded-xl bg-slate-900 text-white text-sm hidden animate-fade-in">
+                        <h4 id="flow-title" class="font-bold text-bio-300 text-sm sm:text-base mb-1"></h4>
+                        <p id="flow-desc" class="text-slate-300 leading-relaxed text-xs sm:text-sm"></p>
+                    </div>
+                </div>
+
+                <!-- Contenedor de Bloques de Apuntes Estructurados -->
+                <div id="notes-blocks-container" class="space-y-6">
+                    <!-- Generado dinámicamente por JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- PESTAÑA 3: TARJETAS DE MEMORIA (FLASHCARDS 3D)                    -->
+        <!-- ================================================================= -->
+        <section id="tab-flashcards" class="tab-content hidden space-y-6">
+            <div id="flashcards-empty-state" class="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 shadow-sm text-center max-w-xl mx-auto space-y-4">
+                <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <h2 class="text-xl font-extrabold text-slate-800">Sin tarjetas de memoria todavía</h2>
+                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                    Carga tus apuntes primero para generar automáticamente tarjetas 3D interactivas con todos tus conceptos y definiciones.
+                </p>
+                <button type="button" onclick="switchTab('cargar')" class="bg-bio-600 hover:bg-bio-700 text-white font-bold py-3 px-6 rounded-2xl text-xs sm:text-sm shadow-sm transition-all inline-flex items-center gap-2">
+                    <i class="fa-solid fa-file-import"></i> Ir a 📥 Cargar Apuntes
+                </button>
+            </div>
+
+            <div id="flashcards-active-content" class="hidden space-y-6">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-slate-800 text-xs sm:text-sm">Filtrar por Tema:</span>
+                        <select id="flashcard-category" onchange="loadFlashcards()" class="bg-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-bio-500">
+                            <option value="all">Todas las tarjetas</option>
+                        </select>
+                    </div>
+                    <div class="text-xs font-bold text-slate-500">
+                        Dominadas: <span id="mastered-count" class="text-bio-600 font-extrabold text-sm">0</span> / <span id="total-flashcards">0</span>
+                        <span class="text-slate-400 font-normal ml-2">(Tarjeta <span id="fc-position-num">1</span>)</span>
+                    </div>
+                </div>
+
+                <!-- Tarjeta 3D Interactiva -->
+                <div class="max-w-lg mx-auto perspective cursor-pointer" onclick="flipCard()">
+                    <div id="flashcard-inner" class="transform-style-3d bg-white border border-slate-200 rounded-3xl p-8 min-h-[270px] shadow-md flex flex-col justify-between relative">
+                        <!-- Cara Frontal -->
+                        <div id="flashcard-front" class="backface-hidden flex flex-col justify-between h-full">
+                            <div class="flex items-center justify-between gap-2">
+                                <span id="fc-tag" class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-bio-100 text-bio-800 w-fit"></span>
+                                <span id="fc-mastered-badge" class="hidden text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                                    <i class="fa-solid fa-check"></i> Dominada
+                                </span>
+                            </div>
+                            <div class="my-auto text-center py-6">
+                                <h3 id="fc-question" class="text-lg sm:text-xl font-bold text-slate-800 leading-snug"></h3>
+                            </div>
+                            <div class="text-center text-xs text-slate-400 font-medium">
+                                <i class="fa-solid fa-rotate text-amber-500"></i> Haz clic para ver la respuesta
+                            </div>
+                        </div>
+
+                        <!-- Cara Trasera -->
+                        <div id="flashcard-back" class="backface-hidden rotate-y-180 absolute inset-0 p-8 flex flex-col justify-between bg-gradient-to-br from-slate-900 to-bio-950 text-white rounded-3xl">
+                            <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/20 text-bio-200 w-fit">Respuesta</span>
+                            <div class="my-auto text-center py-4 overflow-y-auto">
+                                <p id="fc-answer" class="text-sm sm:text-base font-medium text-slate-100 leading-relaxed"></p>
+                            </div>
+                            <div class="text-center text-[11px] text-slate-400">
+                                ¿Te la sabías bien? Usa los botones de abajo
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de Control -->
+                <div class="flex justify-center items-center gap-3 sm:gap-4 max-w-lg mx-auto">
+                    <button type="button" onclick="answerFlashcard(false)" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 px-4 rounded-xl border border-red-200 text-xs transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-xmark"></i> Repasar luego
+                    </button>
+                    <button type="button" onclick="nextCard()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 p-3 rounded-xl text-xs transition-colors" title="Saltar tarjeta">
+                        <i class="fa-solid fa-forward"></i>
+                    </button>
+                    <button type="button" onclick="answerFlashcard(true)" class="flex-1 bg-bio-600 hover:bg-bio-700 text-white font-bold py-3 px-4 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check"></i> ¡Ya me la sé! (+20 XP)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- PESTAÑA 4: RELLENAR DEFINICIONES (HUECOS CLAVE)                   -->
+        <!-- ================================================================= -->
+        <section id="tab-definiciones" class="tab-content hidden space-y-6">
+            <div id="definiciones-empty-state" class="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 shadow-sm text-center max-w-xl mx-auto space-y-4">
+                <div class="w-16 h-16 bg-cyan-100 text-cyan-700 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-pen-nib"></i>
+                </div>
+                <h2 class="text-xl font-extrabold text-slate-800">No hay definiciones para rellenar aún</h2>
+                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                    Cuando cargues tus apuntes, ocultaremos automáticamente las palabras clave más importantes para que practiques completando los huecos.
+                </p>
+                <button type="button" onclick="switchTab('cargar')" class="bg-bio-600 hover:bg-bio-700 text-white font-bold py-3 px-6 rounded-2xl text-xs sm:text-sm shadow-sm transition-all inline-flex items-center gap-2">
+                    <i class="fa-solid fa-file-import"></i> Ir a 📥 Cargar Apuntes
+                </button>
+            </div>
+
+            <div id="definiciones-active-content" class="hidden space-y-6">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-pen-nib text-science-600"></i> Completar Definiciones Clave
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">
+                                Escribe los conceptos clave que faltan en cada frase (ignora tildes y mayúsculas).
+                            </p>
+                        </div>
+                        <div class="bg-bio-50 border border-bio-200 px-4 py-2 rounded-xl text-xs font-bold text-bio-800 flex items-center gap-2">
+                            <i class="fa-solid fa-award text-bio-600 text-base"></i>
+                            <span>Completadas: <strong id="defs-completed-count" class="text-sm">0</strong> / <strong id="defs-total-count">0</strong></span>
+                        </div>
+                    </div>
+
+                    <div id="defs-filter-buttons" class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+                        <!-- Botones de filtro por tema generados dinámicamente -->
+                    </div>
+                </div>
+
+                <div id="definitions-list-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Tarjetas de rellenar huecos generadas dinámicamente -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- PESTAÑA 5: PREGUNTAS SIN OPCIONES (RESPUESTA ESCRITA)             -->
+        <!-- ================================================================= -->
+        <section id="tab-abiertas" class="tab-content hidden space-y-6">
+            <div id="abiertas-empty-state" class="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 shadow-sm text-center max-w-xl mx-auto space-y-4">
+                <div class="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-keyboard"></i>
+                </div>
+                <h2 class="text-xl font-extrabold text-slate-800">Sin preguntas abiertas generadas</h2>
+                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                    Carga tus apuntes primero para practicar redactando respuestas completas sin opciones con corrección automática de palabras clave.
+                </p>
+                <button type="button" onclick="switchTab('cargar')" class="bg-bio-600 hover:bg-bio-700 text-white font-bold py-3 px-6 rounded-2xl text-xs sm:text-sm shadow-sm transition-all inline-flex items-center gap-2">
+                    <i class="fa-solid fa-file-import"></i> Ir a 📥 Cargar Apuntes
+                </button>
+            </div>
+
+            <div id="abiertas-active-content" class="hidden space-y-6">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-keyboard text-rose-600"></i> Preguntas sin Opciones (Respuesta Escrita)
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">
+                                Explica cada concepto con tus palabras. El sistema comprobará si has incluido las palabras clave de tus apuntes.
+                            </p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3">
+                            <!-- Selector de Modo Práctica vs Examen Escrito -->
+                            <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                <button type="button" id="open-mode-practice" onclick="setOpenMode('practice')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-bio-700 shadow-sm transition-all flex items-center gap-1.5">
+                                    <i class="fa-solid fa-lightbulb text-amber-500"></i> Modo Práctica
+                                </button>
+                                <button type="button" id="open-mode-exam" onclick="setOpenMode('exam')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
+                                    <i class="fa-solid fa-shield-halved text-rose-500"></i> Examen Escrito
+                                </button>
+                            </div>
+
+                            <div class="bg-bio-50 border border-bio-200 px-4 py-2 rounded-xl text-xs font-bold text-bio-800 flex items-center gap-2">
+                                <i class="fa-solid fa-circle-check text-bio-600 text-base"></i>
+                                <span>Superadas: <strong id="open-completed-count" class="text-sm">0</strong> / <strong id="open-total-count">0</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="open-filter-buttons" class="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+                        <!-- Botones de filtro por tema generados dinámicamente -->
+                    </div>
+                </div>
+
+                <div id="open-questions-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Tarjetas de preguntas abiertas generadas dinámicamente -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- PESTAÑA 6: JUEGOS DE PRÁCTICA RÁPIDA                              -->
+        <!-- ================================================================= -->
+        <section id="tab-juegos" class="tab-content hidden space-y-6">
+            <div id="juegos-empty-state" class="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 shadow-sm text-center max-w-xl mx-auto space-y-4">
+                <div class="w-16 h-16 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <h2 class="text-xl font-extrabold text-slate-800">Juegos esperando tus apuntes</h2>
+                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                    Carga tu temario para desbloquear el juego de ordenar secuencias y el clasificador relámpago adaptado a tus bloques.
+                </p>
+                <button type="button" onclick="switchTab('cargar')" class="bg-bio-600 hover:bg-bio-700 text-white font-bold py-3 px-6 rounded-2xl text-xs sm:text-sm shadow-sm transition-all inline-flex items-center gap-2">
+                    <i class="fa-solid fa-file-import"></i> Ir a 📥 Cargar Apuntes
+                </button>
+            </div>
+
+            <div id="juegos-active-content" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- JUEGO 1: ORDENA LA SECUENCIA -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="border-b pb-3 flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                                    <i class="fa-solid fa-arrow-down-short-wide text-science-600"></i> Juego 1: Ordena la Secuencia
+                                </h3>
+                                <p id="sequence-game-subtitle" class="text-xs text-slate-500 mt-0.5">
+                                    Pulsa los elementos en el orden correcto según tus apuntes.
+                                </p>
+                            </div>
+                            <button type="button" id="next-sequence-game-btn" onclick="switchSequenceInGame()" class="hidden bg-science-50 hover:bg-science-100 text-science-700 font-bold px-3 py-1.5 rounded-xl text-xs border border-science-200 transition-colors">
+                                Otra secuencia
+                            </button>
+                        </div>
+
+                        <div id="method-steps-pool" class="flex flex-wrap gap-2">
+                            <!-- Pasos desordenados generados por JS -->
+                        </div>
+
+                        <div class="space-y-2">
+                            <span class="text-xs font-bold text-slate-400 uppercase">Tu Secuencia Ordenada:</span>
+                            <div id="method-user-sequence" class="min-h-[60px] bg-slate-50 p-3 rounded-xl border border-dashed border-slate-300 flex flex-wrap gap-2 items-center">
+                                <span class="text-xs text-slate-400">Pulsa los botones de arriba en orden...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 pt-2">
+                        <div class="flex gap-2">
+                            <button type="button" onclick="checkMethodOrder()" class="flex-1 bg-science-600 hover:bg-science-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-sm transition-colors">
+                                Comprobar Orden (+50 XP)
+                            </button>
+                            <button type="button" onclick="resetMethodGame()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-4 py-2.5 rounded-xl text-xs transition-colors">
+                                Reiniciar
+                            </button>
+                        </div>
+                        <div id="method-game-feedback" class="text-xs font-bold min-h-[20px]"></div>
+                    </div>
+                </div>
+
+                <!-- JUEGO 2: CLASIFICADOR RELÁMPAGO -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="border-b pb-3 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                                    <i class="fa-solid fa-bolt text-amber-500"></i> Juego 2: Clasificador Relámpago
+                                </h3>
+                                <p id="speed-game-subtitle" class="text-xs text-slate-500 mt-0.5">
+                                    ¿A qué bloque o categoría de tus apuntes pertenece? (+10 XP)
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs text-slate-400 block">Racha</span>
+                                <span id="streak-count" class="font-extrabold text-amber-500 text-lg">0 🔥</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-gradient-to-r from-purple-900 to-slate-900 text-white p-6 rounded-2xl text-center shadow-inner min-h-[120px] flex flex-col items-center justify-center gap-1.5">
+                            <span id="speed-concept" class="text-base sm:text-lg font-extrabold tracking-wide text-amber-300 animate-fade-in">---</span>
+                            <span id="speed-subclue" class="text-xs text-slate-300 line-clamp-2 max-w-md"></span>
+                        </div>
+
+                        <div id="speed-buttons" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <!-- Botones dinámicos según bloques o tipo de elemento -->
+                        </div>
+                    </div>
+
+                    <div id="speed-feedback" class="text-center text-xs font-bold min-h-[22px] pt-1"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- PESTAÑA 7: SIMULACRO DE EXAMEN (NIVEL 10)                         -->
+        <!-- ================================================================= -->
+        <section id="tab-examen" class="tab-content hidden space-y-6">
+            <div id="examen-empty-state" class="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 shadow-sm text-center max-w-xl mx-auto space-y-4">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <h2 class="text-xl font-extrabold text-slate-800">Simulacro pendiente de apuntes</h2>
+                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                    Carga tu temario para generar un examen tipo test con opciones de longitud equilibrada y repetición inteligente de fallos.
+                </p>
+                <button type="button" onclick="switchTab('cargar')" class="bg-bio-600 hover:bg-bio-700 text-white font-bold py-3 px-6 rounded-2xl text-xs sm:text-sm shadow-sm transition-all inline-flex items-center gap-2">
+                    <i class="fa-solid fa-file-import"></i> Ir a 📥 Cargar Apuntes
+                </button>
+            </div>
+
+            <div id="examen-active-wrapper" class="hidden space-y-6">
+                <!-- Pantalla Inicial del Examen -->
+                <div id="exam-start-card" class="bg-white p-8 rounded-3xl border border-slate-200 shadow-md text-center max-w-2xl mx-auto space-y-4">
+                    <div class="w-16 h-16 bg-bio-100 text-bio-700 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <h2 class="text-2xl font-extrabold text-slate-800">Simulacro Nivel 10</h2>
+                    <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                        Examen generado a partir de tus apuntes con opciones de longitud equilibrada para que no puedas adivinar por extensión. ¡Lee cada detalle con atención!
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-4 text-xs font-semibold text-slate-500 py-2">
+                        <span><i class="fa-solid fa-circle-check text-bio-600"></i> <strong id="exam-total-badge">0</strong> Preguntas</span>
+                        <span><i class="fa-solid fa-scale-balanced text-science-600"></i> Opciones Equilibradas</span>
+                        <span><i class="fa-solid fa-award text-purple-600"></i> Nota sobre 10</span>
+                    </div>
+                    <button type="button" onclick="startExam(false)" class="bg-bio-600 hover:bg-bio-700 text-white font-extrabold py-3.5 px-8 rounded-2xl shadow-lg transition-all text-sm transform hover:scale-105">
+                        🚀 Comenzar Examen Ahora
+                    </button>
+                </div>
+
+                <!-- Pantalla Activa del Examen -->
+                <div id="exam-active-screen" class="hidden space-y-6 max-w-3xl mx-auto">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-2">
+                        <div class="font-bold text-xs text-slate-500 flex items-center gap-2">
+                            <span>Pregunta <span id="exam-current-num" class="text-bio-700 text-sm">1</span> de <span id="exam-total-num">20</span></span>
+                            <span id="exam-retry-badge" class="hidden bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                Modo Repaso de Fallos
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap gap-1" id="exam-dots-nav">
+                            <!-- Puntos de progreso dinámicos -->
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                        <div class="flex items-start justify-between gap-3">
+                            <h3 id="exam-question-text" class="text-base sm:text-lg font-bold text-slate-800 leading-snug"></h3>
+                            <span id="exam-already-solved-tag" class="hidden flex-shrink-0 bg-bio-100 text-bio-800 text-[10px] font-bold px-2.5 py-1 rounded-full">
+                                <i class="fa-solid fa-check"></i> Ya acertada
+                            </span>
+                        </div>
+
+                        <div id="exam-options-container" class="space-y-3">
+                            <!-- Opciones renderizadas aquí -->
+                        </div>
+
+                        <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+                            <button type="button" onclick="prevExamQuestion()" id="exam-prev-btn" class="text-xs font-bold text-slate-500 hover:text-slate-800 disabled:opacity-40 px-4 py-2.5 rounded-xl bg-slate-100 transition-colors">
+                                ← Anterior
+                            </button>
+                            <button type="button" onclick="nextExamQuestion()" id="exam-next-btn" class="text-xs font-bold bg-bio-600 text-white px-5 py-2.5 rounded-xl hover:bg-bio-700 shadow-sm transition-colors">
+                                Siguiente →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pantalla de Resultados del Examen -->
+                <div id="exam-results-screen" class="hidden max-w-3xl mx-auto space-y-6">
+                    <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-md text-center space-y-4">
+                        <h2 class="text-xl font-bold text-slate-700">Resultado del Examen</h2>
+                        <div class="relative w-32 h-32 mx-auto flex items-center justify-center rounded-full border-8 border-bio-500 bg-bio-50 shadow-inner">
+                            <span id="final-score" class="text-3xl font-extrabold text-bio-800">0.0</span>
+                        </div>
+                        <p id="exam-feedback-msg" class="text-sm font-semibold text-slate-700"></p>
+
+                        <div class="flex flex-wrap justify-center gap-3 pt-2">
+                            <button type="button" onclick="startExam(false)" class="bg-bio-600 text-white font-bold px-5 py-2.5 rounded-xl text-xs hover:bg-bio-700 shadow-sm transition-colors">
+                                Repetir Todo
+                            </button>
+                            <button type="button" onclick="repeatMistakes()" id="repeat-mistakes-btn" class="bg-amber-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs hover:bg-amber-600 shadow-sm transition-colors hidden">
+                                Repetir solo fallos
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 space-y-4">
+                        <h3 class="font-bold text-slate-800 text-base">Desglose Detallado de Respuestas</h3>
+                        <div id="exam-breakdown-list" class="space-y-3 text-xs"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL PARA REVISAR Y EDITAR ÍTEMS GENERADOS                           -->
+    <!-- ===================================================================== -->
+    <div id="editor-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-fade-in">
+            <!-- Cabecera Modal -->
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between gap-3">
+                <div>
+                    <h3 class="font-extrabold text-base sm:text-lg flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-bio-400"></i> Editor de Ítems Generados
+                    </h3>
+                    <p class="text-xs text-slate-300">Personaliza, añade o elimina tarjetas, definiciones y preguntas antes de estudiar.</p>
+                </div>
+                <button type="button" onclick="closeEditorModal()" class="text-slate-300 hover:text-white p-2 rounded-xl hover:bg-white/10 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Sub-pestañas del Modal -->
+            <div class="bg-slate-100 px-6 py-2.5 border-b border-slate-200 flex flex-wrap gap-2">
+                <button type="button" onclick="switchEditorSubtab('concepts')" id="ed-tab-concepts" class="ed-subtab px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-bio-700 shadow-sm">
+                    🗂️ Conceptos y Tarjetas (<span id="ed-count-concepts">0</span>)
+                </button>
+                <button type="button" onclick="switchEditorSubtab('defs')" id="ed-tab-defs" class="ed-subtab px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900">
+                    ✍️ Definiciones con Huecos (<span id="ed-count-defs">0</span>)
+                </button>
+                <button type="button" onclick="switchEditorSubtab('open')" id="ed-tab-open" class="ed-subtab px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900">
+                    ⌨️ Preguntas sin Opciones (<span id="ed-count-open">0</span>)
+                </button>
+            </div>
+
+            <!-- Cuerpo desplazable del Modal -->
+            <div id="editor-modal-body" class="p-6 overflow-y-auto space-y-4 flex-grow bg-slate-50">
+                <!-- Renderizado dinámicamente según subpestaña -->
+            </div>
+
+            <!-- Pie del Modal -->
+            <div class="px-6 py-4 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <button type="button" onclick="addNewItemInEditor()" class="bg-science-50 hover:bg-science-100 text-science-700 font-bold px-4 py-2.5 rounded-xl text-xs border border-science-200 transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus"></i> Añadir nuevo ítem
+                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeEditorModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="saveEditorChanges()" class="bg-bio-600 hover:bg-bio-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-sm transition-colors flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i> Guardar Cambios y Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pie de página -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400 font-medium">
+            StudyMaster Studio • Generador Interactivo de Estudio 100% Adaptable a tus Apuntes
+        </div>
+    </footer>
+
+    <!-- ===================================================================== -->
+    <!-- LÓGICA JAVASCRIPT Y MOTOR DE ANÁLISIS LOCAL                           -->
+    <!-- ===================================================================== -->
+    <script>
+        // =========================================================
+        // 1. UTILIDADES DE ALMACENAMIENTO SEGURO Y NOTIFICACIONES
+        // =========================================================
+        const memoryStorage = {};
+        function safeGetItem(key, fallback) {
+            try {
+                const val = localStorage.getItem(key);
+                return val !== null ? val : fallback;
+            } catch (e) {
+                return memoryStorage[key] !== undefined ? memoryStorage[key] : fallback;
+            }
+        }
+
+        function safeSetItem(key, value) {
+            try {
+                localStorage.setItem(key, value);
+            } catch (e) {
+                memoryStorage[key] = value;
+            }
+        }
+
+        let toastTimeout = null;
+        function showToast(message, isWarning = false) {
+            const banner = document.getElementById('toast-banner');
+            const msgEl = document.getElementById('toast-message');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.innerText = message;
+            iconEl.className = isWarning
+                ? 'fa-solid fa-triangle-exclamation text-amber-400 text-sm'
+                : 'fa-solid fa-circle-check text-bio-400 text-sm';
+
+            banner.classList.remove('hidden');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                banner.classList.add('hidden');
+            }, 3200);
+        }
+
+        // =========================================================
+        // 2. ESTADO GLOBAL DEL ESTUDIANTE Y DEL TEMARIO ACTIVO
+        // =========================================================
+        let userXP = parseInt(safeGetItem('sm_xp', '0'), 10) || 0;
+        let userLevel = Math.floor(userXP / 100) + 1;
+
+        // Estado del estudio actual (comienza completamente VACÍO)
+        let studyState = {
+            hasContent: false,
+            subjectTitle: '',
+            rawText: '',
+            blocks: [],         // [{ id, title, items: [{ term, definition, rawLine, type }] }]
+            concepts: [],       // [{ id, blockId, blockTitle, term, definition, type }]
+            sequences: [],      // [{ id, blockId, blockTitle, title, steps: [] }]
+            definitions: [],    // [{ id, blockId, blockTitle, title, template, rawSentence, blanks: [{ accepted, display }], distractorWord, explain }]
+            openQuestions: [],  // [{ id, blockId, blockTitle, question, hint, keyGroups: [{ label, keywords }], modelAnswer }]
+            examQuestions: []   // [{ q, options, correct, explain }]
+        };
+
+        // Progreso de la sesión sobre el temario cargado
+        let masteredCards = [];
+        let completedDefs = [];
+        let completedOpen = [];
+
+        function updateXP(amount) {
+            const oldLevel = userLevel;
+            userXP += amount;
+            userLevel = Math.floor(userXP / 100) + 1;
+            safeSetItem('sm_xp', String(userXP));
+
+            document.getElementById('xp-display').innerText = userXP;
+            document.getElementById('level-display').innerText = userLevel;
+
+            if (amount > 0 && userLevel > oldLevel) {
+                showToast(`🎉 ¡Subiste al Nivel ${userLevel}!`);
+            }
+        }
+
+        // Reinicio de XP y progreso en dos clics (sin confirm())
+        let resetConfirmPending = false;
+        let resetConfirmTimer = null;
+        function handleResetStats() {
+            const btn = document.getElementById('reset-stats-btn');
+            const label = document.getElementById('reset-stats-label');
+
+            if (!resetConfirmPending) {
+                resetConfirmPending = true;
+                btn.classList.add('bg-red-500/80', 'text-white');
+                label.classList.remove('hidden');
+                label.innerText = '¿Confirmar?';
+                resetConfirmTimer = setTimeout(() => {
+                    resetConfirmPending = false;
+                    btn.classList.remove('bg-red-500/80', 'text-white');
+                    label.classList.add('hidden');
+                    label.innerText = 'Reiniciar';
+                }, 3500);
+            } else {
+                clearTimeout(resetConfirmTimer);
+                resetConfirmPending = false;
+                btn.classList.remove('bg-red-500/80', 'text-white');
+                label.classList.add('hidden');
+                label.innerText = 'Reiniciar';
+
+                userXP = 0;
+                userLevel = 1;
+                masteredCards = [];
+                completedDefs = [];
+                completedOpen = [];
+                streak = 0;
+                document.getElementById('streak-count').innerText = '0 🔥';
+                updateXP(0);
+                if (studyState.hasContent) {
+                    refreshAllStudyViews();
+                }
+                showToast('XP y progreso de esta sesión reiniciados a 0.');
+            }
+        }
+
+        // =========================================================
+        // 3. NAVEGACIÓN ENTRE PESTAÑAS Y CONTROL DE ESTADO VACÍO
+        // =========================================================
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-white/15', 'text-white', 'shadow-sm');
+                btn.classList.add('text-slate-200');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-white/15', 'text-white', 'shadow-sm');
+                activeBtn.classList.remove('text-slate-200');
+            }
+
+            if (tabId === 'flashcards' && studyState.hasContent) loadFlashcards();
+            if (tabId === 'definiciones' && studyState.hasContent) renderDefinitions();
+            if (tabId === 'abiertas' && studyState.hasContent) renderOpenQuestions();
+            if (tabId === 'juegos' && studyState.hasContent) initGames();
+        }
+
+        function syncEmptyOrActiveStates() {
+            const has = studyState.hasContent;
+            const sections = [
+                { empty: 'apuntes-empty-state', active: 'apuntes-active-content' },
+                { empty: 'flashcards-empty-state', active: 'flashcards-active-content' },
+                { empty: 'definiciones-empty-state', active: 'definiciones-active-content' },
+                { empty: 'abiertas-empty-state', active: 'abiertas-active-content' },
+                { empty: 'juegos-empty-state', active: 'juegos-active-content' },
+                { empty: 'examen-empty-state', active: 'examen-active-wrapper' }
+            ];
+
+            sections.forEach(sec => {
+                const emptyEl = document.getElementById(sec.empty);
+                const activeEl = document.getElementById(sec.active);
+                if (emptyEl && activeEl) {
+                    if (has) {
+                        emptyEl.classList.add('hidden');
+                        activeEl.classList.remove('hidden');
+                    } else {
+                        emptyEl.classList.remove('hidden');
+                        activeEl.classList.add('hidden');
+                    }
+                }
+            });
+
+            const editBtn = document.getElementById('edit-items-btn');
+            const summaryBanner = document.getElementById('generation-summary-banner');
+            const subtitle = document.getElementById('header-subject-subtitle');
+
+            if (has) {
+                editBtn.classList.remove('hidden');
+                summaryBanner.classList.remove('hidden');
+                subtitle.innerText = `Tema activo: ${studyState.subjectTitle}`;
+                document.getElementById('generation-stats-text').innerText =
+                    `Se han creado ${studyState.blocks.length} bloques, ${studyState.concepts.length} tarjetas, ${studyState.definitions.length} definiciones con huecos, ${studyState.openQuestions.length} preguntas abiertas y ${studyState.examQuestions.length} preguntas de examen.`;
+            } else {
+                editBtn.classList.add('hidden');
+                summaryBanner.classList.add('hidden');
+                subtitle.innerText = 'Carga tus apuntes para generar actividades interactivas al instante';
+            }
+        }
+
+        // =========================================================
+        // 4. MOTOR INTELIGENTE DE ANÁLISIS EN JAVASCRIPT (LOCAL)
+        // =========================================================
+        const SPANISH_STOPWORDS = new Set([
+            'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'lo', 'al', 'del',
+            'a', 'ante', 'bajo', 'cabe', 'con', 'contra', 'de', 'desde', 'durante',
+            'en', 'entre', 'hacia', 'hasta', 'mediante', 'para', 'por', 'segun',
+            'sin', 'so', 'sobre', 'tras', 'versus', 'via', 'y', 'e', 'ni', 'o', 'u',
+            'que', 'cual', 'cuales', 'quien', 'quienes', 'cuyo', 'cuya', 'cuyos', 'cuyas',
+            'donde', 'cuando', 'como', 'cuanto', 'cuanta', 'cuantos', 'cuantas',
+            'es', 'son', 'era', 'eran', 'fue', 'fueron', 'ser', 'siendo', 'sido',
+            'esta', 'estan', 'estaba', 'estaban', 'estar', 'estado', 'tiene', 'tienen',
+            'tenia', 'tener', 'hace', 'hacen', 'hacer', 'puede', 'pueden', 'poder',
+            'muy', 'mas', 'menos', 'tan', 'tanto', 'tanta', 'tantos', 'tantas',
+            'pero', 'sino', 'aunque', 'porque', 'pues', 'si', 'no', 'ya', 'tambien',
+            'ademas', 'asi', 'este', 'esta', 'estos', 'estas', 'esto', 'ese', 'esa',
+            'esos', 'esas', 'eso', 'aquel', 'aquella', 'aquellos', 'aquellas', 'aquello',
+            'su', 'sus', 'mi', 'mis', 'tu', 'tus', 'nuestro', 'nuestra', 'nuestros', 'nuestras',
+            'se', 'le', 'les', 'me', 'te', 'nos', 'os', 'cada', 'otro', 'otra', 'otros', 'otras',
+            'todo', 'toda', 'todos', 'todas', 'mismo', 'misma', 'mismos', 'mismas',
+            'solo', 'solamente', 'incluso', 'ejemplo', 'ejemplos', 'parte', 'forma', 'tipo', 'tipos'
+        ]);
+
+        function normalizeText(str) {
+            return String(str || '')
+                .toLowerCase()
+                .trim()
+                .replace(/₂/g, '2')
+                .replace(/₃/g, '3')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[.,;:!?¿¡()[\]{}"'«»\-_/\\*]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function stripMarkdownBold(str) {
+            return String(str || '').replace(/\*\*(.*?)\*\*/g, '$1').trim();
+        }
+
+        function capitalizeFirst(str) {
+            const s = String(str || '').trim();
+            if (!s) return '';
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        // Detecta si una línea es un encabezado de Bloque/Tema
+        function detectHeading(line) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.length > 90) return null;
+
+            // 1. Markdown # Título
+            const mdMatch = trimmed.match(/^#{1,4}\s+(.+)$/);
+            if (mdMatch) return stripMarkdownBold(mdMatch[1]).replace(/[:\-]+$/, '').trim();
+
+            // 2. Palabras clave de encabezado (TEMA 1:, BLOQUE 2:, UNIDAD..., APARTADO...)
+            const topicMatch = trimmed.match(/^(?:tema|bloque|unidad|apartado|cap[ií]tulo|secci[oó]n)\s*\d*[\s:.\-]+(.+)$/i);
+            if (topicMatch) return stripMarkdownBold(trimmed);
+
+            // 3. Números romanos (I. Introducción, II. Desarrollo)
+            const romanMatch = trimmed.match(/^[IVXLCDM]{1,5}[\.\)]\s+(.+)$/);
+            if (romanMatch && trimmed.length <= 70) return stripMarkdownBold(trimmed);
+
+            // 4. Líneas íntegramente en MAYÚSCULAS (mínimo 4 letras, sin ser una definición larga con dos puntos)
+            const cleanNoBold = stripMarkdownBold(trimmed);
+            const lettersOnly = cleanNoBold.replace(/[^a-zA-ZÁÉÍÓÚÑáéíóúñ]/g, '');
+            if (lettersOnly.length >= 4 && cleanNoBold === cleanNoBold.toUpperCase() && !cleanNoBold.includes('→') && !cleanNoBold.includes('->')) {
+                return cleanNoBold.replace(/[:\-]+$/, '').trim();
+            }
+
+            return null;
+        }
+
+        // Extrae palabras clave relevantes de una frase (priorizando **negrita**, números/fórmulas y términos técnicos)
+        function extractKeywordsFromSentence(sentence, excludeTerm = '') {
+            const normExclude = normalizeText(excludeTerm);
+            const candidates = [];
+            const seenNorm = new Set();
+
+            // 1. Prioridad máxima: palabras o expresiones cortas entre **doble asterisco**
+            const boldRegex = /\*\*(.*?)\*\*/g;
+            let match;
+            while ((match = boldRegex.exec(sentence)) !== null) {
+                const rawBold = match[1].trim();
+                const normBold = normalizeText(rawBold);
+                if (rawBold.length >= 2 && rawBold.length <= 32 && normBold !== normExclude && !seenNorm.has(normBold)) {
+                    seenNorm.add(normBold);
+                    candidates.push({ word: rawBold, norm: normBold, priority: 100 });
+                }
+            }
+
+            // 2. Números con unidades o fórmulas químicas (ej. 70%, 150 millones, 15 ºC, CO2, H2O, 1492)
+            const cleanSentence = stripMarkdownBold(sentence);
+            const numFormulaRegex = /\b(?:\d+(?:[.,]\d+)?\s*(?:%|ºc|°c|km|m|cm|mm|millones|años|siglo)?|[A-Z]{1,3}\d)\b/g;
+            while ((match = numFormulaRegex.exec(cleanSentence)) !== null) {
+                const rawNum = match[0].trim();
+                const normNum = normalizeText(rawNum);
+                if (rawNum.length >= 2 && normNum !== normExclude && !seenNorm.has(normNum)) {
+                    seenNorm.add(normNum);
+                    candidates.push({ word: rawNum, norm: normNum, priority: 85 });
+                }
+            }
+
+            // 3. Sustantivos, adjetivos o verbos clave (palabras de >= 4 letras fuera de stopwords)
+            const words = cleanSentence.split(/[\s,.;:!?¿¡()[\]{}"'«»\-]+/);
+            words.forEach((w, idx) => {
+                const cleanW = w.trim();
+                const normW = normalizeText(cleanW);
+                if (
+                    cleanW.length >= 4 &&
+                    !SPANISH_STOPWORDS.has(normW) &&
+                    normW !== normExclude &&
+                    !normExclude.includes(normW) &&
+                    !seenNorm.has(normW) &&
+                    !/^\d+$/.test(normW)
+                ) {
+                    seenNorm.add(normW);
+                    // Dar puntuación extra a palabras largas o con mayúscula intermedia
+                    let score = cleanW.length * 5;
+                    if (idx > 0 && /^[A-ZÁÉÍÓÚÑ]/.test(cleanW)) score += 15;
+                    candidates.push({ word: cleanW, norm: normW, priority: score });
+                }
+            });
+
+            // Ordenar por prioridad descendente
+            candidates.sort((a, b) => b.priority - a.priority);
+            return candidates;
+        }
+
+        // Genera los aceptados flexibles para una palabra (singular/plural básico y sin tildes)
+        function buildAcceptedVariants(word) {
+            const norm = normalizeText(word);
+            const variants = new Set([norm]);
+            if (norm.endsWith('s') && norm.length > 4) {
+                variants.add(norm.slice(0, -1));
+                if (norm.endsWith('es') && norm.length > 5) {
+                    variants.add(norm.slice(0, -2));
+                }
+            } else if (norm.length > 4) {
+                variants.add(norm + 's');
+            }
+            return Array.from(variants);
+        }
+
+        // Motor principal de análisis de apuntes
+        function parseNotesEngine(subjectTitle, rawText) {
+            const finalTitle = subjectTitle.trim() || 'Mis Apuntes de Estudio';
+            const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+            const blocks = [];
+            let currentBlock = {
+                id: 1,
+                title: finalTitle,
+                items: []
+            };
+            blocks.push(currentBlock);
+
+            const rawSequences = [];
+            let numberedBuffer = [];
+            let numberedContextTitle = '';
+
+            function flushNumberedBuffer() {
+                if (numberedBuffer.length >= 3) {
+                    rawSequences.push({
+                        blockId: currentBlock.id,
+                        blockTitle: currentBlock.title,
+                        title: numberedContextTitle || `Secuencia en ${currentBlock.title}`,
+                        steps: numberedBuffer.map(s => stripMarkdownBold(s))
+                    });
+                }
+                numberedBuffer = [];
+                numberedContextTitle = '';
+            }
+
+            lines.forEach((line, lineIdx) => {
+                // Comprobar si la línea es un encabezado de Bloque/Tema
+                const heading = detectHeading(line);
+                if (heading) {
+                    flushNumberedBuffer();
+                    // Si el bloque inicial estaba vacío y aún no hemos creado ninguno real, reutilizarlo
+                    if (blocks.length === 1 && currentBlock.items.length === 0 && currentBlock.title === finalTitle) {
+                        currentBlock.title = heading;
+                    } else {
+                        currentBlock = {
+                            id: blocks.length + 1,
+                            title: heading,
+                            items: []
+                        };
+                        blocks.push(currentBlock);
+                    }
+                    return;
+                }
+
+                // Comprobar si la línea es una cadena con flechas (A -> B -> C o A → B → C)
+                if (/(?:→|->|=>|➜|➔)/.test(line)) {
+                    flushNumberedBuffer();
+                    let seqTitle = `Proceso en ${currentBlock.title}`;
+                    let chainPart = line;
+                    const colonPos = line.indexOf(':');
+                    if (colonPos > 0 && colonPos < 55 && !/(?:→|->|=>|➜|➔)/.test(line.slice(0, colonPos))) {
+                        seqTitle = stripMarkdownBold(line.slice(0, colonPos));
+                        chainPart = line.slice(colonPos + 1);
+                    }
+                    const steps = chainPart
+                        .split(/\s*(?:→|->|=>|➜|➔)\s*/)
+                        .map(s => stripMarkdownBold(s).replace(/\.$/, '').trim())
+                        .filter(s => s.length > 0);
+
+                    if (steps.length >= 3) {
+                        rawSequences.push({
+                            blockId: currentBlock.id,
+                            blockTitle: currentBlock.title,
+                            title: seqTitle,
+                            steps
+                        });
+                    }
+                    // También guardar la línea como punto informativo del bloque
+                    currentBlock.items.push({
+                        term: seqTitle,
+                        definition: steps.join(' → '),
+                        rawLine: line,
+                        type: 'sequence'
+                    });
+                    return;
+                }
+
+                // Comprobar si pertenece a una lista numerada (1. Paso, 2. Paso, Paso 1: ...)
+                const numListMatch = line.match(/^(?:paso|fase|etapa)?\s*(\d+)[\.\):\-]\s+(.+)$/i);
+                if (numListMatch) {
+                    if (numberedBuffer.length === 0) {
+                        // Mirar si la línea anterior servía de título introductorio (acabada en :)
+                        const prevLine = lineIdx > 0 ? lines[lineIdx - 1] : '';
+                        if (prevLine.endsWith(':') && prevLine.length <= 75) {
+                            numberedContextTitle = stripMarkdownBold(prevLine.slice(0, -1));
+                        } else {
+                            numberedContextTitle = `Fases de ${currentBlock.title}`;
+                        }
+                    }
+                    numberedBuffer.push(numListMatch[2].trim());
+                } else {
+                    flushNumberedBuffer();
+                }
+
+                // Limpiar viñetas iniciales (-, *, •)
+                const cleanBulletLine = line.replace(/^[\-•*▪▸►]\s+/, '').trim();
+                if (!cleanBulletLine) return;
+
+                // Detectar si esta línea es solo la cabecera de una lista (acaba en ":")
+                if (cleanBulletLine.endsWith(':') && cleanBulletLine.length <= 75) {
+                    return;
+                }
+
+                // Extraer Concepto y Definición de la línea o de sus oraciones
+                extractConceptsFromLine(cleanBulletLine, currentBlock);
+            });
+
+            flushNumberedBuffer();
+
+            // Filtrar bloques vacíos si hubiera alguno
+            const validBlocks = blocks.filter(b => b.items.length > 0);
+            if (validBlocks.length === 0 && lines.length > 0) {
+                // Respaldo absoluto si el usuario escribió frases muy cortas
+                lines.forEach((l, i) => {
+                    const clean = stripMarkdownBold(l);
+                    currentBlock.items.push({
+                        term: `Punto clave ${i + 1}`,
+                        definition: clean,
+                        rawLine: l,
+                        type: 'fact'
+                    });
+                });
+                validBlocks.push(currentBlock);
+            }
+
+            // Consolidar lista global de conceptos únicos
+            const concepts = [];
+            const seenTerms = new Set();
+            let conceptIdCounter = 1;
+
+            validBlocks.forEach(block => {
+                block.items.forEach(item => {
+                    const normT = normalizeText(item.term);
+                    if (!seenTerms.has(normT) && item.definition.length >= 6) {
+                        seenTerms.add(normT);
+                        concepts.push({
+                            id: conceptIdCounter++,
+                            blockId: block.id,
+                            blockTitle: block.title,
+                            term: item.term,
+                            definition: item.definition,
+                            rawLine: item.rawLine,
+                            type: item.type
+                        });
+                    }
+                });
+            });
+
+            // Preparar secuencias finales (si no hay explícitas, crear una con el orden de conceptos/bloques)
+            const sequences = rawSequences.map((seq, idx) => ({
+                id: idx + 1,
+                ...seq
+            }));
+
+            if (sequences.length === 0 && concepts.length >= 3) {
+                sequences.push({
+                    id: 1,
+                    blockId: validBlocks[0].id,
+                    blockTitle: validBlocks[0].title,
+                    title: `Orden del temario: ${finalTitle}`,
+                    steps: concepts.slice(0, 6).map(c => c.term)
+                });
+            }
+
+            // Generar Definiciones con Huecos (Fill-in-the-blanks)
+            const definitions = buildDefinitionsFromConcepts(concepts);
+
+            // Generar Preguntas sin Opciones (Open Questions)
+            const openQuestions = buildOpenQuestionsFromConcepts(concepts, sequences);
+
+            // Generar Simulacro de Examen (hasta 20 preguntas con longitudes equilibradas)
+            const examQuestions = buildBalancedExamQuestions(concepts, sequences, validBlocks);
+
+            return {
+                hasContent: concepts.length > 0,
+                subjectTitle: finalTitle,
+                rawText,
+                blocks: validBlocks,
+                concepts,
+                sequences,
+                definitions,
+                openQuestions,
+                examQuestions
+            };
+        }
+
+        // Extrae uno o varios pares Concepto -> Definición de una línea o párrafo
+        function extractConceptsFromLine(line, targetBlock) {
+            // Caso 1: Separador explícito (Concepto: definición | Concepto - definición | Concepto = definición)
+            const sepMatch = line.match(/^([^:=–—\-]{2,65}?)\s*(?::|=|–|—|\s-\s)\s*(.{8,})$/);
+            if (sepMatch) {
+                const rawTerm = stripMarkdownBold(sepMatch[1]).replace(/^\d+[\.\)]\s+/, '').trim();
+                const rawDef = sepMatch[2].trim();
+                // Evitar falsos positivos si la parte izquierda tiene demasiadas palabras (> 8)
+                if (rawTerm.split(/\s+/).length <= 8) {
+                    targetBlock.items.push({
+                        term: capitalizeFirst(rawTerm),
+                        definition: stripMarkdownBold(rawDef),
+                        rawLine: line,
+                        type: 'definition'
+                    });
+                    return;
+                }
+            }
+
+            // Dividir por oraciones si es un párrafo narrativo
+            const sentences = line.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length >= 12);
+
+            sentences.forEach(sentence => {
+                // Caso 2: Verbos definitorios naturales ("El/La X es...", "X consiste en...", "Se denomina X a...")
+                const verbMatch = sentence.match(/^(?:El|La|Los|Las|Un|Una|Unos|Unas)?\s*([^,.;:]{2,50}?)\s+(es|son|consiste en|consisten en|se define como|se definen como|se denomina|se denominan|se llama|se llaman|representa|constituye)\s+(.{8,})$/i);
+                if (verbMatch && verbMatch[1].split(/\s+/).length <= 7) {
+                    const term = capitalizeFirst(stripMarkdownBold(verbMatch[1]));
+                    targetBlock.items.push({
+                        term,
+                        definition: stripMarkdownBold(sentence),
+                        rawLine: sentence,
+                        type: 'definition'
+                    });
+                    return;
+                }
+
+                // Caso 3: Oración narrativa normal -> extraer palabra en **negrita** o palabra clave principal como término
+                const keywords = extractKeywordsFromSentence(sentence);
+                let inferredTerm = '';
+                if (keywords.length > 0) {
+                    inferredTerm = capitalizeFirst(keywords[0].word);
+                } else {
+                    const firstWords = stripMarkdownBold(sentence).split(/\s+/).slice(0, 3).join(' ');
+                    inferredTerm = capitalizeFirst(firstWords.replace(/[.,;:]+$/, ''));
+                }
+
+                targetBlock.items.push({
+                    term: inferredTerm,
+                    definition: stripMarkdownBold(sentence),
+                    rawLine: sentence,
+                    type: 'fact'
+                });
+            });
+        }
+
+        // Construye las tarjetas de Rellenar Definiciones con 1 a 3 huecos y distractor del propio temario
+        function buildDefinitionsFromConcepts(concepts) {
+            const allKeywordsPool = [];
+            concepts.forEach(c => {
+                const kws = extractKeywordsFromSentence(c.rawLine || c.definition, c.term);
+                kws.forEach(k => allKeywordsPool.push(k.word));
+            });
+
+            const defs = [];
+            let defId = 1;
+
+            concepts.forEach(concept => {
+                const sourceText = concept.rawLine || concept.definition;
+                const cleanText = stripMarkdownBold(sourceText);
+                if (cleanText.length < 20) return;
+
+                const keywords = extractKeywordsFromSentence(sourceText, concept.term);
+                if (keywords.length === 0) return;
+
+                // Elegir entre 1 y 3 palabras clave según la longitud de la frase
+                const desiredBlanks = cleanText.length < 55 ? 1 : (cleanText.length < 115 ? 2 : 3);
+                const selectedKws = keywords.slice(0, desiredBlanks);
+
+                // Ordenar las palabras elegidas según su posición real en la frase
+                const positionedBlanks = [];
+                selectedKws.forEach(kwObj => {
+                    const escaped = kwObj.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`(?<![a-zA-ZÁÉÍÓÚÑáéíóúñ0-9])${escaped}(?![a-zA-ZÁÉÍÓÚÑáéíóúñ0-9])`, 'i');
+                    const match = regex.exec(cleanText);
+                    if (match) {
+                        positionedBlanks.push({
+                            index: match.index,
+                            length: match[0].length,
+                            matchedWord: match[0]
+                        });
+                    }
+                });
+
+                if (positionedBlanks.length === 0) return;
+
+                // Ordenar por aparición de izquierda a derecha y evitar solapamientos
+                positionedBlanks.sort((a, b) => a.index - b.index);
+                const nonOverlapping = [];
+                let lastEnd = -1;
+                positionedBlanks.forEach(pb => {
+                    if (pb.index >= lastEnd) {
+                        nonOverlapping.push(pb);
+                        lastEnd = pb.index + pb.length;
+                    }
+                });
+
+                // Reconstruir plantilla reemplazando cada palabra por {0}, {1}, {2}
+                let template = '';
+                let cursor = 0;
+                const blanksMeta = [];
+
+                nonOverlapping.forEach((pb, bIdx) => {
+                    template += cleanText.slice(cursor, pb.index) + `{${bIdx}}`;
+                    cursor = pb.index + pb.length;
+                    blanksMeta.push({
+                        accepted: buildAcceptedVariants(pb.matchedWord),
+                        display: pb.matchedWord
+                    });
+                });
+                template += cleanText.slice(cursor);
+
+                // Elegir una palabra trampa real de otro concepto para el banco de palabras
+                const usedNorms = new Set(blanksMeta.map(b => normalizeText(b.display)));
+                usedNorms.add(normalizeText(concept.term));
+                const distractorCandidate = allKeywordsPool.find(w => !usedNorms.has(normalizeText(w))) || 'concepto';
+
+                defs.push({
+                    id: defId++,
+                    blockId: concept.blockId,
+                    blockTitle: concept.blockTitle,
+                    title: `${defId - 1}. ${concept.term}`,
+                    template,
+                    rawSentence: cleanText,
+                    blanks: blanksMeta,
+                    distractorWord: distractorCandidate,
+                    explain: `${concept.term}: ${concept.definition}`
+                });
+            });
+
+            return defs;
+        }
+
+        // Construye Preguntas sin Opciones (respuesta abierta con corrección por palabras clave)
+        function buildOpenQuestionsFromConcepts(concepts, sequences) {
+            const openQs = [];
+            let qId = 1;
+
+            concepts.forEach((concept, idx) => {
+                const kws = extractKeywordsFromSentence(concept.rawLine || concept.definition, concept.term);
+                const topKws = kws.slice(0, 3);
+
+                // Si no se detectaron suficientes palabras clave, usar palabras relevantes de la definición
+                const keyGroups = topKws.map(k => ({
+                    label: k.word,
+                    keywords: buildAcceptedVariants(k.word)
+                }));
+
+                if (keyGroups.length === 0) {
+                    const fallbackWords = concept.definition.split(/\s+/).filter(w => normalizeText(w).length >= 4 && !SPANISH_STOPWORDS.has(normalizeText(w))).slice(0, 2);
+                    fallbackWords.forEach(fw => {
+                        const cleanFw = fw.replace(/[.,;:!?]+$/, '');
+                        keyGroups.push({
+                            label: cleanFw,
+                            keywords: buildAcceptedVariants(cleanFw)
+                        });
+                    });
+                }
+
+                if (keyGroups.length === 0) return;
+
+                const promptTemplates = [
+                    `${qId}. Define o explica con tus palabras: «${concept.term}».`,
+                    `${qId}. ¿En qué consiste o qué función tiene «${concept.term}»?`,
+                    `${qId}. Explica el siguiente concepto de tus apuntes: «${concept.term}».`
+                ];
+                const questionText = promptTemplates[idx % promptTemplates.length];
+
+                openQs.push({
+                    id: qId++,
+                    blockId: concept.blockId,
+                    blockTitle: concept.blockTitle,
+                    question: questionText,
+                    hint: `Incluye ideas relacionadas con: ${keyGroups.map(g => g.label).join(', ')}.`,
+                    keyGroups,
+                    modelAnswer: `${concept.term}: ${concept.definition}`
+                });
+            });
+
+            // Añadir hasta 3 preguntas sobre secuencias si existen
+            sequences.slice(0, 3).forEach(seq => {
+                if (seq.steps.length >= 3) {
+                    const keyGroups = seq.steps.slice(0, 4).map(step => {
+                        const kws = extractKeywordsFromSentence(step);
+                        const mainKw = kws.length > 0 ? kws[0].word : step.split(/\s+/)[0];
+                        return {
+                            label: step,
+                            keywords: buildAcceptedVariants(mainKw)
+                        };
+                    });
+
+                    openQs.push({
+                        id: qId++,
+                        blockId: seq.blockId,
+                        blockTitle: seq.blockTitle,
+                        question: `${qId}. Enumera y explica ordenadamente las fases de: «${seq.title}».`,
+                        hint: `Menciona los pasos clave del proceso (${seq.steps.length} etapas).`,
+                        keyGroups,
+                        modelAnswer: `${seq.title}: ${seq.steps.map((s, i) => `${i + 1}) ${s}`).join(' → ')}.`
+                    });
+                }
+            });
+
+            return openQs;
+        }
+
+        // =========================================================
+        // EQUILIBRADOR DE LONGITUD PARA OPCIONES DEL EXAMEN TIPO TEST
+        // =========================================================
+        // Garantiza que la respuesta correcta NO sea sistemáticamente la frase más larga
+        function balanceOptionLengths(correctText, distractorPool) {
+            const cleanCorrect = correctText.trim();
+            const targetLen = cleanCorrect.length;
+
+            // Seleccionar los 3 distractores cuya longitud natural sea más cercana a la correcta
+            const sortedByProximity = [...distractorPool]
+                .filter(d => normalizeText(d) !== normalizeText(cleanCorrect))
+                .sort((a, b) => Math.abs(a.length - targetLen) - Math.abs(b.length - targetLen));
+
+            const chosen = sortedByProximity.slice(0, 3);
+
+            // Ajustar suavemente si alguna opción sobresale demasiado en longitud para mantener equilibrio visual
+            const adjustedDistractors = chosen.map((dist, idx) => {
+                let text = dist.trim();
+                // Si el distractor es mucho más largo que la respuesta correcta (> 1.45x), recortar en una pausa natural
+                if (text.length > targetLen * 1.45 && targetLen >= 25) {
+                    const cutLimit = Math.min(text.length, Math.round(targetLen * 1.2));
+                    const slice = text.slice(0, cutLimit);
+                    const lastSpace = slice.lastIndexOf(' ');
+                    text = (lastSpace > 15 ? slice.slice(0, lastSpace) : slice).replace(/[,;:\-]+$/, '') + '.';
+                }
+                // Si el distractor es mucho más corto (< 0.55x) y tenemos otro distractor sobrante, combinar brevemente
+                if (text.length < targetLen * 0.55 && sortedByProximity[3 + idx]) {
+                    const extra = sortedByProximity[3 + idx].trim().replace(/\.$/, '');
+                    const combined = `${text.replace(/\.$/, '')}; además, ${extra.charAt(0).toLowerCase() + extra.slice(1)}.`;
+                    if (combined.length <= targetLen * 1.35) {
+                        text = combined;
+                    }
+                }
+                return text;
+            });
+
+            return {
+                correctOption: cleanCorrect,
+                distractors: adjustedDistractors
+            };
+        }
+
+        // Genera hasta 20 preguntas tipo test basadas exclusivamente en los apuntes cargados
+        function buildBalancedExamQuestions(concepts, sequences, blocks) {
+            if (concepts.length < 2) return [];
+
+            const questions = [];
+            const allDefinitions = concepts.map(c => c.definition);
+            const allTerms = concepts.map(c => c.term);
+
+            // 1. Preguntas de definición ("¿Cuál de las siguientes opciones describe mejor a X?")
+            concepts.forEach((concept, idx) => {
+                if (questions.length >= 20) return;
+
+                if (idx % 2 === 0 && allDefinitions.length >= 4) {
+                    const balanced = balanceOptionLengths(concept.definition, allDefinitions);
+                    if (balanced.distractors.length === 3) {
+                        const rawOpts = [
+                            { text: balanced.correctOption, isCorrect: true },
+                            ...balanced.distractors.map(d => ({ text: d, isCorrect: false }))
+                        ].sort(() => Math.random() - 0.5);
+
+                        questions.push({
+                            q: `${questions.length + 1}. ¿Qué afirmación describe correctamente a «${concept.term}»?`,
+                            options: rawOpts.map(o => o.text),
+                            correct: rawOpts.findIndex(o => o.isCorrect),
+                            explain: `Según tus apuntes (${concept.blockTitle}): ${concept.term} — ${concept.definition}`
+                        });
+                    }
+                } else if (allTerms.length >= 4) {
+                    // Tipo B: "¿A qué concepto corresponde esta descripción?"
+                    const balanced = balanceOptionLengths(concept.term, allTerms);
+                    if (balanced.distractors.length === 3) {
+                        const rawOpts = [
+                            { text: balanced.correctOption, isCorrect: true },
+                            ...balanced.distractors.map(d => ({ text: d, isCorrect: false }))
+                        ].sort(() => Math.random() - 0.5);
+
+                        questions.push({
+                            q: `${questions.length + 1}. ¿A qué concepto de tus apuntes corresponde esta descripción?: «${concept.definition}»`,
+                            options: rawOpts.map(o => o.text),
+                            correct: rawOpts.findIndex(o => o.isCorrect),
+                            explain: `La descripción corresponde a «${concept.term}» dentro del bloque «${concept.blockTitle}».`
+                        });
+                    }
+                }
+            });
+
+            // 2. Preguntas sobre secuencias (si hay espacio hasta 20 y existen secuencias de >= 4 pasos)
+            sequences.forEach(seq => {
+                if (questions.length >= 20 || seq.steps.length < 4) return;
+                for (let i = 0; i < seq.steps.length - 1 && questions.length < 20; i++) {
+                    const currentStep = seq.steps[i];
+                    const nextStep = seq.steps[i + 1];
+                    const otherSteps = seq.steps.filter((_, sIdx) => sIdx !== i + 1);
+                    if (otherSteps.length < 3) continue;
+
+                    const balanced = balanceOptionLengths(nextStep, otherSteps);
+                    if (balanced.distractors.length === 3) {
+                        const rawOpts = [
+                            { text: balanced.correctOption, isCorrect: true },
+                            ...balanced.distractors.map(d => ({ text: d, isCorrect: false }))
+                        ].sort(() => Math.random() - 0.5);
+
+                        questions.push({
+                            q: `${questions.length + 1}. En «${seq.title}», ¿qué etapa ocurre inmediatamente después de «${currentStep}»?`,
+                            options: rawOpts.map(o => o.text),
+                            correct: rawOpts.findIndex(o => o.isCorrect),
+                            explain: `La secuencia completa es: ${seq.steps.join(' → ')}.`
+                        });
+                    }
+                }
+            });
+
+            // 3. Preguntas de clasificación por bloque (si hay >= 4 bloques distintos y aún faltan preguntas)
+            if (blocks.length >= 4 && questions.length < 20) {
+                const blockTitles = blocks.map(b => b.title);
+                concepts.forEach(concept => {
+                    if (questions.length >= 20) return;
+                    const alreadyAsked = questions.some(q => q.q.includes(`«${concept.term}»`));
+                    if (alreadyAsked) return;
+
+                    const balanced = balanceOptionLengths(concept.blockTitle, blockTitles);
+                    if (balanced.distractors.length === 3) {
+                        const rawOpts = [
+                            { text: balanced.correctOption, isCorrect: true },
+                            ...balanced.distractors.map(d => ({ text: d, isCorrect: false }))
+                        ].sort(() => Math.random() - 0.5);
+
+                        questions.push({
+                            q: `${questions.length + 1}. ¿En qué bloque o apartado de tus apuntes se estudia «${concept.term}»?`,
+                            options: rawOpts.map(o => o.text),
+                            correct: rawOpts.findIndex(o => o.isCorrect),
+                            explain: `«${concept.term}» forma parte del bloque «${concept.blockTitle}».`
+                        });
+                    }
+                });
+            }
+
+            return questions.slice(0, 20);
+        }
+
+        // =========================================================
+        // 5. ACCIONES DE CARGA, DEMO, GUARDADO Y EXPORTACIÓN JSON
+        // =========================================================
+        function updateCharCount() {
+            const text = document.getElementById('notes-textarea').value || '';
+            document.getElementById('char-count-indicator').innerText = `${text.length} caracteres`;
+        }
+
+        function toggleFormatGuide() {
+            const body = document.getElementById('format-guide-body');
+            const chevron = document.getElementById('guide-chevron');
+            body.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+
+        function processNotesAndGenerate(customDataOverride = null) {
+            if (customDataOverride) {
+                studyState = customDataOverride;
+            } else {
+                const titleInput = document.getElementById('subject-title-input').value;
+                const rawText = document.getElementById('notes-textarea').value;
+
+                if (!rawText || rawText.trim().length < 15) {
+                    showToast('Escribe o pega al menos un par de frases en tus apuntes.', true);
+                    document.getElementById('notes-textarea').focus();
+                    return;
+                }
+
+                studyState = parseNotesEngine(titleInput, rawText);
+            }
+
+            if (!studyState.hasContent) {
+                showToast('No se pudieron extraer conceptos suficientes. Añade un poco más de texto.', true);
+                return;
+            }
+
+            // Reiniciar contadores de progreso de sesión para el nuevo temario
+            masteredCards = [];
+            completedDefs = [];
+            completedOpen = [];
+            streak = 0;
+
+            syncEmptyOrActiveStates();
+            refreshAllStudyViews();
+            showToast(`⚡ ¡Listo! ${studyState.concepts.length} tarjetas y ${studyState.examQuestions.length} preguntas generadas.`);
+        }
+
+        function refreshAllStudyViews() {
+            renderNotesAndFlowchart();
+            populateCategorySelectors();
+            loadFlashcards();
+            renderDefinitions();
+            renderOpenQuestions();
+            initGames();
+            resetExamSetupUI();
+        }
+
+        // Cargar texto de demostración opcional (vacío por defecto al abrir la app)
+        function loadDemoNotes() {
+            const demoTitle = 'Ciencias de la Naturaleza - El Sistema Solar y la Tierra';
+            const demoText = `# 1. EL SISTEMA SOLAR Y LOS PLANETAS
+Sistema Solar: conjunto astronómico formado por el Sol y todos los astros que giran a su alrededor atraídos por la gravedad.
+Planetas interiores: son los cuatro planetas más cercanos al Sol (**Mercurio**, **Venus**, **Tierra** y **Marte**) y tienen superficie rocosa.
+Planetas exteriores: son los cuatro gigantes gaseosos o helados (**Júpiter**, **Saturno**, **Urano** y **Neptuno**) situados más allá del cinturón de asteroides.
+Órbita planetaria: trayectoria elíptica que describe un planeta alrededor del Sol durante su movimiento de traslación.
+
+# 2. LA TIERRA Y SUS MOVIMIENTOS
+Distancia Tierra-Sol: la Tierra se encuentra a **150 millones de kilómetros** del Sol, distancia óptima para mantener una temperatura media de **15 ºC** y agua líquida.
+Rotación terrestre: giro de la Tierra sobre su propio eje que dura **24 horas** y origina la sucesión del día y la noche.
+Traslación terrestre: desplazamiento completo de la Tierra alrededor del Sol que dura **365 días** y 6 horas, provocando las cuatro estaciones del año.
+Capas de la Tierra: Biosfera → Atmósfera → Hidrosfera → Geosfera
+
+# 3. FASES DEL CICLO DEL AGUA EN LA TIERRA
+El ciclo hidrológico permite que el agua circule continuamente por la hidrosfera:
+1. Evaporación: el calor del Sol calienta el agua de mares y océanos transformándola en vapor de agua.
+2. Condensación: el vapor asciende, se enfría en la atmósfera y forma pequeñas gotas que originan las nubes.
+3. Precipitación: el agua de las nubes cae a la superficie terrestre en forma de lluvia, nieve o granizo.
+4. Retorno: el agua discurre por los ríos y aguas subterráneas regresando nuevamente hacia los océanos.`;
+
+            document.getElementById('subject-title-input').value = demoTitle;
+            document.getElementById('notes-textarea').value = demoText;
+            updateCharCount();
+            processNotesAndGenerate();
+        }
+
+        // Limpiar todo en dos clics
+        let clearConfirmPending = false;
+        let clearConfirmTimer = null;
+        function handleClearAll() {
+            const btn = document.getElementById('clear-all-btn');
+            if (!clearConfirmPending) {
+                clearConfirmPending = true;
+                btn.innerText = '¿Seguro? Pulsa de nuevo';
+                btn.classList.add('text-red-600', 'font-bold');
+                clearConfirmTimer = setTimeout(() => {
+                    clearConfirmPending = false;
+                    btn.innerText = 'Limpiar todo';
+                    btn.classList.remove('text-red-600', 'font-bold');
+                }, 3000);
+            } else {
+                clearTimeout(clearConfirmTimer);
+                clearConfirmPending = false;
+                btn.innerText = 'Limpiar todo';
+                btn.classList.remove('text-red-600', 'font-bold');
+
+                document.getElementById('subject-title-input').value = '';
+                document.getElementById('notes-textarea').value = '';
+                updateCharCount();
+
+                studyState = {
+                    hasContent: false,
+                    subjectTitle: '',
+                    rawText: '',
+                    blocks: [],
+                    concepts: [],
+                    sequences: [],
+                    definitions: [],
+                    openQuestions: [],
+                    examQuestions: []
+                };
+                masteredCards = [];
+                completedDefs = [];
+                completedOpen = [];
+                syncEmptyOrActiveStates();
+                showToast('Espacio de trabajo limpiado por completo.');
+            }
+        }
+
+        // Subida de archivos (.txt, .md, .csv o .json de respaldo)
+        function handleFileUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = String(e.target.result || '');
+                const fileName = file.name || 'Archivo';
+
+                if (fileName.toLowerCase().endsWith('.json')) {
+                    try {
+                        const parsed = JSON.parse(content);
+                        if (parsed && parsed.concepts && parsed.subjectTitle) {
+                            document.getElementById('subject-title-input').value = parsed.subjectTitle;
+                            document.getElementById('notes-textarea').value = parsed.rawText || '';
+                            updateCharCount();
+                            processNotesAndGenerate({
+                                hasContent: true,
+                                subjectTitle: parsed.subjectTitle,
+                                rawText: parsed.rawText || '',
+                                blocks: parsed.blocks || [],
+                                concepts: parsed.concepts || [],
+                                sequences: parsed.sequences || [],
+                                definitions: parsed.definitions || [],
+                                openQuestions: parsed.openQuestions || [],
+                                examQuestions: parsed.examQuestions || buildBalancedExamQuestions(parsed.concepts || [], parsed.sequences || [], parsed.blocks || [])
+                            });
+                            showToast(`Temario JSON «${parsed.subjectTitle}» importado.`);
+                        } else {
+                            showToast('El archivo JSON no tiene un formato válido de StudyMaster.', true);
+                        }
+                    } catch (err) {
+                        showToast('Error al leer el archivo JSON.', true);
+                    }
+                } else {
+                    const baseTitle = fileName.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ');
+                    if (!document.getElementById('subject-title-input').value.trim()) {
+                        document.getElementById('subject-title-input').value = capitalizeFirst(baseTitle);
+                    }
+                    document.getElementById('notes-textarea').value = content;
+                    updateCharCount();
+                    processNotesAndGenerate();
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        // Gestor de Temarios Guardados en localStorage
+        function getSavedDecksList() {
+            try {
+                return JSON.parse(safeGetItem('sm_saved_decks', '[]'));
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveCurrentDeck() {
+            if (!studyState.hasContent) {
+                showToast('Primero genera actividades a partir de tus apuntes.', true);
+                return;
+            }
+            const decks = getSavedDecksList();
+            const existingIdx = decks.findIndex(d => normalizeText(d.subjectTitle) === normalizeText(studyState.subjectTitle));
+            const deckPayload = {
+                id: existingIdx !== -1 ? decks[existingIdx].id : Date.now(),
+                savedAt: new Date().toLocaleDateString('es-ES'),
+                ...studyState
+            };
+
+            if (existingIdx !== -1) {
+                decks[existingIdx] = deckPayload;
+            } else {
+                decks.unshift(deckPayload);
+            }
+
+            safeSetItem('sm_saved_decks', JSON.stringify(decks));
+            renderSavedDecksList();
+            showToast(`💾 Temario «${studyState.subjectTitle}» guardado.`);
+        }
+
+        function loadSavedDeck(deckId) {
+            const decks = getSavedDecksList();
+            const found = decks.find(d => d.id === deckId);
+            if (!found) return;
+
+            document.getElementById('subject-title-input').value = found.subjectTitle;
+            document.getElementById('notes-textarea').value = found.rawText || '';
+            updateCharCount();
+            processNotesAndGenerate(found);
+        }
+
+        function deleteSavedDeck(deckId) {
+            const decks = getSavedDecksList().filter(d => d.id !== deckId);
+            safeSetItem('sm_saved_decks', JSON.stringify(decks));
+            renderSavedDecksList();
+            showToast('Temario eliminado de guardados.');
+        }
+
+        function renderSavedDecksList() {
+            const decks = getSavedDecksList();
+            document.getElementById('saved-decks-count').innerText = decks.length;
+            const listEl = document.getElementById('saved-decks-list');
+            listEl.innerHTML = '';
+
+            if (decks.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-3">No tienes temarios guardados todavía.</p>`;
+                return;
+            }
+
+            decks.forEach(deck => {
+                const row = document.createElement('div');
+                row.className = 'p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2';
+
+                const infoBtn = document.createElement('button');
+                infoBtn.type = 'button';
+                infoBtn.className = 'text-left flex-1 min-w-0 hover:text-bio-700 transition-colors';
+                infoBtn.onclick = () => loadSavedDeck(deck.id);
+                infoBtn.innerHTML = `
+                    <div class="font-bold text-xs text-slate-800 truncate">${escapeHtml(deck.subjectTitle)}</div>
+                    <div class="text-[10px] text-slate-400">${deck.concepts ? deck.concepts.length : 0} tarjetas · ${deck.savedAt || ''}</div>
+                `;
+
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'text-slate-400 hover:text-red-600 p-1.5 rounded-lg transition-colors text-xs';
+                delBtn.title = 'Eliminar guardado';
+                delBtn.onclick = () => deleteSavedDeck(deck.id);
+                delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+
+                row.appendChild(infoBtn);
+                row.appendChild(delBtn);
+                listEl.appendChild(row);
+            });
+        }
+
+        function exportCurrentDeckJSON() {
+            if (!studyState.hasContent) {
+                showToast('Genera primero las actividades para poder exportarlas.', true);
+                return;
+            }
+            const dataStr = JSON.stringify(studyState, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const safeFileName = normalizeText(studyState.subjectTitle).replace(/\s+/g, '_') || 'temario_studymaster';
+            a.href = url;
+            a.download = `${safeFileName}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('📤 Archivo .JSON descargado correctamente.');
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        // =========================================================
+        // 6. PESTAÑA 2: APUNTES Y DIAGRAMA DE FLUJO INTERACTIVO
+        // =========================================================
+        function renderNotesAndFlowchart() {
+            // 1. Botones de filtro por bloque
+            const filterContainer = document.getElementById('notes-filter-buttons');
+            filterContainer.innerHTML = '';
+
+            const allBtn = document.createElement('button');
+            allBtn.type = 'button';
+            allBtn.className = 'note-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-bio-600 text-white transition-all';
+            allBtn.innerText = `Todos (${studyState.blocks.length})`;
+            allBtn.onclick = function() { filterNotes('all', this); };
+            filterContainer.appendChild(allBtn);
+
+            studyState.blocks.forEach(block => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'note-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all';
+                btn.innerText = block.title;
+                btn.onclick = function() { filterNotes(String(block.id), this); };
+                filterContainer.appendChild(btn);
+            });
+
+            // 2. Diagrama de flujo interactivo
+            const flowSection = document.getElementById('flowchart-section');
+            if (studyState.sequences.length > 0) {
+                flowSection.classList.remove('hidden');
+                const selectWrapper = document.getElementById('flowchart-selector-wrapper');
+                const selectEl = document.getElementById('flowchart-sequence-select');
+                selectEl.innerHTML = '';
+
+                studyState.sequences.forEach((seq, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = String(idx);
+                    opt.innerText = seq.title;
+                    selectEl.appendChild(opt);
+                });
+
+                if (studyState.sequences.length > 1) {
+                    selectWrapper.classList.remove('hidden');
+                } else {
+                    selectWrapper.classList.add('hidden');
+                }
+                renderSelectedFlowchart();
+            } else {
+                flowSection.classList.add('hidden');
+            }
+
+            // 3. Bloques organizados de apuntes
+            const blocksContainer = document.getElementById('notes-blocks-container');
+            blocksContainer.innerHTML = '';
+
+            const accentBorders = ['border-bio-500', 'border-science-500', 'border-purple-500', 'border-amber-500', 'border-teal-500'];
+
+            studyState.blocks.forEach((block, bIdx) => {
+                const blockConcepts = studyState.concepts.filter(c => c.blockId === block.id);
+                const itemsToRender = blockConcepts.length > 0 ? blockConcepts : block.items;
+                const borderClass = accentBorders[bIdx % accentBorders.length];
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'note-block bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4';
+                wrapper.setAttribute('data-block-id', String(block.id));
+
+                const headerDiv = document.createElement('div');
+                headerDiv.className = `border-l-4 ${borderClass} pl-4 py-1 flex flex-wrap items-center justify-between gap-2`;
+                headerDiv.innerHTML = `
+                    <h2 class="text-lg sm:text-xl font-extrabold text-slate-800">${escapeHtml(block.title)}</h2>
+                    <span class="text-[11px] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">${itemsToRender.length} puntos clave</span>
+                `;
+                wrapper.appendChild(headerDiv);
+
+                const gridDiv = document.createElement('div');
+                gridDiv.className = 'grid grid-cols-1 md:grid-cols-2 gap-3.5';
+
+                itemsToRender.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-slate-50/90 hover:bg-bio-50/40 p-4 rounded-xl border border-slate-200/80 transition-colors space-y-1.5';
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-bold text-bio-800 text-xs sm:text-sm bg-bio-100/80 px-2.5 py-0.5 rounded-lg">
+                                ${escapeHtml(item.term)}
+                            </span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">${escapeHtml(item.definition)}</p>
+                    `;
+                    gridDiv.appendChild(card);
+                });
+
+                wrapper.appendChild(gridDiv);
+                blocksContainer.appendChild(wrapper);
+            });
+        }
+
+        function filterNotes(blockId, btnElement) {
+            document.querySelectorAll('.note-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-bio-600', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-600');
+            });
+            if (btnElement) {
+                btnElement.classList.remove('bg-slate-100', 'text-slate-600');
+                btnElement.classList.add('bg-bio-600', 'text-white');
+            }
+
+            document.querySelectorAll('.note-block').forEach(block => {
+                if (blockId === 'all' || block.getAttribute('data-block-id') === blockId) {
+                    block.classList.remove('hidden');
+                } else {
+                    block.classList.add('hidden');
+                }
+            });
+        }
+
+        function renderSelectedFlowchart() {
+            const selectEl = document.getElementById('flowchart-sequence-select');
+            const seqIdx = parseInt(selectEl.value || '0', 10) || 0;
+            const seq = studyState.sequences[seqIdx];
+            if (!seq) return;
+
+            const container = document.getElementById('flowchart-nodes-container');
+            const infoBox = document.getElementById('flow-info-box');
+            container.innerHTML = '';
+            infoBox.classList.add('hidden');
+
+            seq.steps.forEach((stepText, idx) => {
+                const node = document.createElement('button');
+                node.type = 'button';
+                node.className = 'flow-node text-left bg-science-50 border border-science-200 hover:bg-science-100 px-4 py-3 rounded-xl cursor-pointer max-w-xs';
+                node.innerHTML = `
+                    <div class="text-[10px] font-extrabold text-science-600 uppercase">Etapa ${idx + 1}</div>
+                    <div class="font-bold text-slate-800 text-xs sm:text-sm line-clamp-2">${escapeHtml(stepText)}</div>
+                `;
+                node.onclick = () => {
+                    document.getElementById('flow-title').innerText = `Etapa ${idx + 1} de ${seq.steps.length} — ${seq.title}`;
+                    document.getElementById('flow-desc').innerText = stepText;
+                    infoBox.classList.remove('hidden');
+                };
+                container.appendChild(node);
+
+                if (idx < seq.steps.length - 1) {
+                    const arrow = document.createElement('span');
+                    arrow.className = 'text-slate-400 text-xs px-1';
+                    arrow.innerHTML = '<i class="fa-solid fa-arrow-right"></i>';
+                    container.appendChild(arrow);
+                }
+            });
+        }
+
+        // =========================================================
+        // 7. PESTAÑA 3: TARJETAS DE MEMORIA (FLASHCARDS 3D)
+        // =========================================================
+        let currentFCIndex = 0;
+        let filteredCards = [];
+        let isFlipped = false;
+
+        function populateCategorySelectors() {
+            // Selector Flashcards
+            const fcSelect = document.getElementById('flashcard-category');
+            fcSelect.innerHTML = `<option value="all">Todas las tarjetas (${studyState.concepts.length})</option>`;
+            studyState.blocks.forEach(b => {
+                const count = studyState.concepts.filter(c => c.blockId === b.id).length;
+                if (count > 0) {
+                    const opt = document.createElement('option');
+                    opt.value = String(b.id);
+                    opt.innerText = `${b.title} (${count})`;
+                    fcSelect.appendChild(opt);
+                }
+            });
+
+            // Botones filtro Definiciones
+            const defFilters = document.getElementById('defs-filter-buttons');
+            defFilters.innerHTML = `<span class="text-xs font-bold text-slate-600 mr-1"><i class="fa-solid fa-filter text-bio-600"></i> Tema:</span>`;
+            const allDefBtn = document.createElement('button');
+            allDefBtn.type = 'button';
+            allDefBtn.className = 'def-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-bio-600 text-white transition-all';
+            allDefBtn.innerText = `Todas (${studyState.definitions.length})`;
+            allDefBtn.onclick = function() { filterDefinitions('all', this); };
+            defFilters.appendChild(allDefBtn);
+
+            studyState.blocks.forEach(b => {
+                const count = studyState.definitions.filter(d => d.blockId === b.id).length;
+                if (count > 0) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'def-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all';
+                    btn.innerText = `${b.title} (${count})`;
+                    btn.onclick = function() { filterDefinitions(String(b.id), this); };
+                    defFilters.appendChild(btn);
+                }
+            });
+
+            // Botones filtro Preguntas Abiertas
+            const openFilters = document.getElementById('open-filter-buttons');
+            openFilters.innerHTML = `<span class="text-xs font-bold text-slate-600 mr-1"><i class="fa-solid fa-filter text-bio-600"></i> Tema:</span>`;
+            const allOpenBtn = document.createElement('button');
+            allOpenBtn.type = 'button';
+            allOpenBtn.className = 'open-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-bio-600 text-white transition-all';
+            allOpenBtn.innerText = `Todas (${studyState.openQuestions.length})`;
+            allOpenBtn.onclick = function() { filterOpenQuestions('all', this); };
+            openFilters.appendChild(allOpenBtn);
+
+            studyState.blocks.forEach(b => {
+                const count = studyState.openQuestions.filter(q => q.blockId === b.id).length;
+                if (count > 0) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'open-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all';
+                    btn.innerText = `${b.title} (${count})`;
+                    btn.onclick = function() { filterOpenQuestions(String(b.id), this); };
+                    openFilters.appendChild(btn);
+                }
+            });
+        }
+
+        function updateMasteredCounter() {
+            const masteredInCat = filteredCards.filter(c => masteredCards.includes(c.id)).length;
+            document.getElementById('mastered-count').innerText = masteredInCat;
+            document.getElementById('total-flashcards').innerText = filteredCards.length;
+            document.getElementById('fc-position-num').innerText = filteredCards.length > 0 ? (currentFCIndex + 1) : 0;
+        }
+
+        function loadFlashcards() {
+            const selectedCat = document.getElementById('flashcard-category').value;
+            filteredCards = selectedCat === 'all'
+                ? studyState.concepts
+                : studyState.concepts.filter(c => String(c.blockId) === selectedCat);
+
+            currentFCIndex = 0;
+            updateMasteredCounter();
+            showCurrentCard();
+        }
+
+        function showCurrentCard() {
+            if (filteredCards.length === 0) return;
+            isFlipped = false;
+            document.getElementById('flashcard-inner').classList.remove('rotate-y-180');
+
+            const card = filteredCards[currentFCIndex];
+            document.getElementById('fc-tag').innerText = card.blockTitle;
+            document.getElementById('fc-question').innerText = card.term;
+            document.getElementById('fc-answer').innerText = card.definition;
+
+            const badge = document.getElementById('fc-mastered-badge');
+            if (masteredCards.includes(card.id)) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+            updateMasteredCounter();
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            const inner = document.getElementById('flashcard-inner');
+            if (isFlipped) inner.classList.add('rotate-y-180');
+            else inner.classList.remove('rotate-y-180');
+        }
+
+        function nextCard() {
+            if (filteredCards.length === 0) return;
+            currentFCIndex = (currentFCIndex + 1) % filteredCards.length;
+            showCurrentCard();
+        }
+
+        function answerFlashcard(known) {
+            if (filteredCards.length === 0) return;
+            const card = filteredCards[currentFCIndex];
+            if (known) {
+                if (!masteredCards.includes(card.id)) {
+                    masteredCards.push(card.id);
+                    updateXP(20);
+                    showToast('¡Tarjeta dominada! +20 XP');
+                }
+            } else {
+                masteredCards = masteredCards.filter(id => id !== card.id);
+            }
+            updateMasteredCounter();
+            nextCard();
+        }
+
+        // =========================================================
+        // 8. PESTAÑA 4: RELLENAR DEFINICIONES (HUECOS CLAVE)
+        // =========================================================
+        let currentDefFilter = 'all';
+        let activeDefInput = null;
+
+        function updateDefsCounter() {
+            document.getElementById('defs-completed-count').innerText = completedDefs.length;
+            document.getElementById('defs-total-count').innerText = studyState.definitions.length;
+        }
+
+        function filterDefinitions(blockId, btnElement) {
+            currentDefFilter = blockId;
+            document.querySelectorAll('.def-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-bio-600', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-600');
+            });
+            if (btnElement) {
+                btnElement.classList.remove('bg-slate-100', 'text-slate-600');
+                btnElement.classList.add('bg-bio-600', 'text-white');
+            }
+            renderDefinitions();
+        }
+
+        function renderDefinitions() {
+            updateDefsCounter();
+            const container = document.getElementById('definitions-list-container');
+            container.innerHTML = '';
+
+            const filtered = currentDefFilter === 'all'
+                ? studyState.definitions
+                : studyState.definitions.filter(d => String(d.blockId) === currentDefFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="col-span-full bg-white p-6 rounded-2xl border border-slate-200 text-center text-xs text-slate-500">No hay definiciones con huecos en este filtro. Prueba seleccionando "Todas".</div>`;
+                return;
+            }
+
+            filtered.forEach(def => {
+                const isDone = completedDefs.includes(def.id);
+
+                // Construir frase con inputs seguros usando escapeHtml en los fragmentos de texto
+                let parts = [escapeHtml(def.template)];
+                def.blanks.forEach((blank, bIdx) => {
+                    const inputHtml = `<input type="text"
+                        id="def-input-${def.id}-${bIdx}"
+                        data-def-id="${def.id}"
+                        data-blank-idx="${bIdx}"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="hueco ${bIdx + 1}"
+                        onfocus="activeDefInput = this"
+                        onkeydown="if(event.key === 'Enter') checkDefinition(${def.id})"
+                        class="def-input-${def.id} inline-block w-32 sm:w-36 mx-1 my-0.5 px-2.5 py-1 text-center font-bold text-slate-800 bg-slate-50 border-b-2 border-slate-400 rounded-t-lg focus:outline-none focus:border-bio-600 focus:bg-bio-50/50 transition-all text-xs sm:text-sm" />`;
+                    parts[0] = parts[0].replace(`{${bIdx}}`, inputHtml);
+                });
+
+                // Banco de palabras desordenadas + 1 palabra trampa
+                const wordBankPool = [
+                    ...def.blanks.map(b => b.display),
+                    def.distractorWord
+                ].sort(() => Math.random() - 0.5);
+
+                const card = document.createElement('div');
+                card.id = `def-card-${def.id}`;
+                card.className = `bg-white p-5 sm:p-6 rounded-2xl border shadow-sm space-y-4 flex flex-col justify-between transition-all ${
+                    isDone ? 'border-bio-300 bg-bio-50/10' : 'border-slate-200'
+                }`;
+
+                card.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border bg-science-50 text-science-700 border-science-200">
+                                ${escapeHtml(def.blockTitle)}
+                            </span>
+                            <span id="def-status-${def.id}" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                                isDone ? 'bg-bio-100 text-bio-800' : 'bg-slate-100 text-slate-500'
+                            }">
+                                ${isDone ? '<i class="fa-solid fa-circle-check text-bio-600"></i> Completada (+25 XP)' : 'Pendiente (+25 XP)'}
+                            </span>
+                        </div>
+
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base">${escapeHtml(def.title)}</h3>
+
+                        <div class="text-xs sm:text-sm text-slate-700 leading-loose bg-slate-50/70 p-4 rounded-xl border border-slate-100">
+                            ${parts[0]}
+                        </div>
+
+                        <!-- Banco de palabras opcional -->
+                        <div id="def-bank-${def.id}" class="hidden p-3 rounded-xl bg-amber-50 border border-amber-200 space-y-2 animate-fade-in">
+                            <div class="text-[11px] font-bold text-amber-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-lightbulb text-amber-500"></i> Banco de palabras (incluye 1 palabra trampa):
+                            </div>
+                            <div id="def-bank-btns-${def.id}" class="flex flex-wrap gap-1.5"></div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="checkDefinition(${def.id})" class="flex-1 bg-bio-600 hover:bg-bio-700 text-white font-bold py-2 px-4 rounded-xl text-xs shadow-sm transition-colors flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-check"></i> Comprobar
+                            </button>
+                            <button type="button" onclick="toggleWordBank(${def.id})" class="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold py-2 px-3 rounded-xl text-xs border border-amber-200 transition-colors flex items-center gap-1.5">
+                                <i class="fa-solid fa-lightbulb text-amber-500"></i> Banco de palabras
+                            </button>
+                            <button type="button" onclick="revealDefinitionSolution(${def.id})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs border border-slate-200 transition-colors" title="Ver solución">
+                                Ver solución
+                            </button>
+                            <button type="button" onclick="resetDefinition(${def.id})" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-2.5 rounded-xl text-xs transition-colors" title="Limpiar">
+                                <i class="fa-solid fa-eraser"></i>
+                            </button>
+                        </div>
+
+                        <div id="def-feedback-${def.id}" class="hidden p-3.5 rounded-xl text-xs leading-relaxed animate-fade-in"></div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+
+                // Añadir botones del banco de palabras de forma segura con textContent
+                const bankBtnsContainer = document.getElementById(`def-bank-btns-${def.id}`);
+                wordBankPool.forEach(w => {
+                    const wbBtn = document.createElement('button');
+                    wbBtn.type = 'button';
+                    wbBtn.className = 'px-2.5 py-1 rounded-lg bg-amber-100/80 hover:bg-amber-200 text-amber-900 font-semibold text-xs border border-amber-300 transition-colors';
+                    wbBtn.innerText = w;
+                    wbBtn.onclick = () => insertBankWord(def.id, w);
+                    bankBtnsContainer.appendChild(wbBtn);
+                });
+            });
+        }
+
+        function toggleWordBank(defId) {
+            const bank = document.getElementById(`def-bank-${defId}`);
+            if (bank) bank.classList.toggle('hidden');
+        }
+
+        function insertBankWord(defId, wordDisplay) {
+            const inputs = Array.from(document.querySelectorAll(`.def-input-${defId}`));
+            let targetInput = null;
+            if (activeDefInput && activeDefInput.getAttribute('data-def-id') === String(defId)) {
+                targetInput = activeDefInput;
+            } else {
+                targetInput = inputs.find(inp => inp.value.trim() === '') || inputs[0];
+            }
+
+            if (targetInput) {
+                targetInput.value = wordDisplay;
+                const nextEmpty = inputs.find(inp => inp.value.trim() === '');
+                if (nextEmpty) nextEmpty.focus();
+                else activeDefInput = null;
+            }
+        }
+
+        function revealDefinitionSolution(defId) {
+            const def = studyState.definitions.find(d => d.id === defId);
+            if (!def) return;
+            def.blanks.forEach((blank, bIdx) => {
+                const input = document.getElementById(`def-input-${defId}-${bIdx}`);
+                if (input) {
+                    input.value = blank.display;
+                    input.classList.remove('border-slate-400', 'bg-slate-50', 'border-red-500', 'bg-red-50');
+                    input.classList.add('border-science-500', 'bg-science-50', 'text-science-900');
+                }
+            });
+            const fb = document.getElementById(`def-feedback-${defId}`);
+            fb.classList.remove('hidden', 'bg-bio-50', 'border-bio-200', 'bg-red-50', 'border-red-200');
+            fb.classList.add('bg-science-50', 'border', 'border-science-200', 'text-slate-700');
+            fb.innerHTML = `<strong class="text-science-800">Solución mostrada:</strong> ${escapeHtml(def.explain)}`;
+        }
+
+        function resetDefinition(defId) {
+            document.querySelectorAll(`.def-input-${defId}`).forEach(inp => {
+                inp.value = '';
+                inp.classList.remove('border-bio-600', 'bg-bio-50', 'text-bio-900', 'border-red-500', 'bg-red-50', 'text-red-900', 'border-science-500', 'bg-science-50', 'text-science-900');
+                inp.classList.add('border-slate-400', 'bg-slate-50', 'text-slate-800');
+            });
+            const fb = document.getElementById(`def-feedback-${defId}`);
+            if (fb) fb.classList.add('hidden');
+        }
+
+        function checkDefinition(defId) {
+            const def = studyState.definitions.find(d => d.id === defId);
+            if (!def) return;
+
+            let allCorrect = true;
+            const corrections = [];
+
+            def.blanks.forEach((blank, bIdx) => {
+                const input = document.getElementById(`def-input-${defId}-${bIdx}`);
+                const userVal = normalizeText(input.value);
+                const isBlankCorrect = userVal !== '' && blank.accepted.some(acc => normalizeText(acc) === userVal);
+
+                input.classList.remove('border-slate-400', 'bg-slate-50', 'text-slate-800', 'border-bio-600', 'bg-bio-50', 'text-bio-900', 'border-red-500', 'bg-red-50', 'text-red-900', 'border-science-500', 'bg-science-50', 'text-science-900');
+
+                if (isBlankCorrect) {
+                    input.classList.add('border-bio-600', 'bg-bio-50', 'text-bio-900');
+                } else {
+                    allCorrect = false;
+                    input.classList.add('border-red-500', 'bg-red-50', 'text-red-900');
+                    corrections.push(`Hueco ${bIdx + 1}: <strong>${escapeHtml(blank.display)}</strong>`);
+                }
+            });
+
+            const fb = document.getElementById(`def-feedback-${defId}`);
+            fb.classList.remove('hidden', 'bg-bio-50', 'border-bio-200', 'text-bio-900', 'bg-red-50', 'border-red-200', 'text-red-900', 'bg-science-50', 'border-science-200');
+
+            if (allCorrect) {
+                fb.classList.add('bg-bio-50', 'border', 'border-bio-200', 'text-bio-900');
+                fb.innerHTML = `
+                    <div class="font-bold text-bio-700 mb-1"><i class="fa-solid fa-circle-check"></i> ¡Excelente! Has acertado todos los huecos clave.</div>
+                    <p class="text-slate-600">${escapeHtml(def.explain)}</p>
+                `;
+
+                if (!completedDefs.includes(defId)) {
+                    completedDefs.push(defId);
+                    updateXP(25);
+                    updateDefsCounter();
+                    showToast('¡Definición completada! +25 XP');
+
+                    const statusBadge = document.getElementById(`def-status-${defId}`);
+                    if (statusBadge) {
+                        statusBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-bio-100 text-bio-800';
+                        statusBadge.innerHTML = '<i class="fa-solid fa-circle-check text-bio-600"></i> Completada (+25 XP)';
+                    }
+                    const card = document.getElementById(`def-card-${defId}`);
+                    if (card) {
+                        card.classList.remove('border-slate-200');
+                        card.classList.add('border-bio-300', 'bg-bio-50/10');
+                    }
+                }
+            } else {
+                fb.classList.add('bg-red-50', 'border', 'border-red-200', 'text-red-900');
+                fb.innerHTML = `
+                    <div class="font-bold text-red-700 mb-1"><i class="fa-solid fa-circle-xmark"></i> Revisa los huecos marcados en rojo:</div>
+                    <div class="mb-1 text-red-800">${corrections.join(' · ')}</div>
+                `;
+            }
+        }
+
+        // =========================================================
+        // 9. PESTAÑA 5: PREGUNTAS SIN OPCIONES (RESPUESTA ESCRITA)
+        // =========================================================
+        let currentOpenFilter = 'all';
+        let currentOpenMode = 'practice'; // 'practice' | 'exam'
+
+        function updateOpenCounter() {
+            document.getElementById('open-completed-count').innerText = completedOpen.length;
+            document.getElementById('open-total-count').innerText = studyState.openQuestions.length;
+        }
+
+        function setOpenMode(mode) {
+            currentOpenMode = mode;
+            const practiceBtn = document.getElementById('open-mode-practice');
+            const examBtn = document.getElementById('open-mode-exam');
+
+            if (mode === 'practice') {
+                practiceBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-bio-700 shadow-sm transition-all flex items-center gap-1.5';
+                examBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5';
+            } else {
+                examBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-rose-700 shadow-sm transition-all flex items-center gap-1.5';
+                practiceBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5';
+                showToast('Modo Examen Escrito activado: pistas ocultas.', true);
+            }
+            renderOpenQuestions();
+        }
+
+        function filterOpenQuestions(blockId, btnElement) {
+            currentOpenFilter = blockId;
+            document.querySelectorAll('.open-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-bio-600', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-600');
+            });
+            if (btnElement) {
+                btnElement.classList.remove('bg-slate-100', 'text-slate-600');
+                btnElement.classList.add('bg-bio-600', 'text-white');
+            }
+            renderOpenQuestions();
+        }
+
+        function renderOpenQuestions() {
+            updateOpenCounter();
+            const container = document.getElementById('open-questions-container');
+            container.innerHTML = '';
+
+            const filtered = currentOpenFilter === 'all'
+                ? studyState.openQuestions
+                : studyState.openQuestions.filter(q => String(q.blockId) === currentOpenFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="col-span-full bg-white p-6 rounded-2xl border border-slate-200 text-center text-xs text-slate-500">No hay preguntas abiertas en este bloque.</div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const isDone = completedOpen.includes(item.id);
+                const hintBtnHtml = currentOpenMode === 'practice'
+                    ? `<button type="button" onclick="toggleOpenHint(${item.id})" class="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold py-2 px-3 rounded-xl text-xs border border-amber-200 transition-colors flex items-center gap-1.5">
+                           <i class="fa-solid fa-lightbulb text-amber-500"></i> Pista
+                       </button>`
+                    : '';
+
+                const card = document.createElement('div');
+                card.id = `open-card-${item.id}`;
+                card.className = `bg-white p-5 sm:p-6 rounded-2xl border shadow-sm space-y-4 flex flex-col justify-between transition-all ${
+                    isDone ? 'border-bio-300 bg-bio-50/10' : 'border-slate-200'
+                }`;
+
+                card.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-200">
+                                ${escapeHtml(item.blockTitle)}
+                            </span>
+                            <span id="open-status-${item.id}" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                                isDone ? 'bg-bio-100 text-bio-800' : 'bg-slate-100 text-slate-500'
+                            }">
+                                ${isDone ? '<i class="fa-solid fa-circle-check text-bio-600"></i> Superada (+30 XP)' : 'Sin completar (+30 XP)'}
+                            </span>
+                        </div>
+
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base leading-snug">${escapeHtml(item.question)}</h3>
+
+                        <div id="open-hint-${item.id}" class="hidden p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 animate-fade-in">
+                            <strong class="font-bold"><i class="fa-solid fa-lightbulb text-amber-500"></i> Pista:</strong> ${escapeHtml(item.hint)}
+                        </div>
+
+                        <div>
+                            <textarea id="open-textarea-${item.id}"
+                                rows="3"
+                                placeholder="Escribe aquí tu respuesta con los conceptos clave de tus apuntes..."
+                                class="w-full p-3.5 text-xs sm:text-sm text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-bio-500 focus:bg-white transition-all resize-y"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="evaluateOpenQuestion(${item.id})" class="flex-1 bg-bio-600 hover:bg-bio-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-sm transition-colors flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-spell-check"></i> Comprobar respuesta
+                            </button>
+                            ${hintBtnHtml}
+                            <button type="button" onclick="toggleModelAnswer(${item.id})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs border border-slate-200 transition-colors flex items-center gap-1.5">
+                                <i class="fa-solid fa-eye text-slate-500"></i> Ver respuesta modelo
+                            </button>
+                        </div>
+
+                        <div id="open-feedback-${item.id}" class="hidden p-4 rounded-xl text-xs leading-relaxed space-y-2.5 animate-fade-in"></div>
+
+                        <div id="open-model-${item.id}" class="hidden p-4 rounded-xl bg-slate-900 text-slate-100 text-xs leading-relaxed space-y-1.5 animate-fade-in">
+                            <div class="font-bold text-bio-300 uppercase tracking-wider text-[10px]">
+                                <i class="fa-solid fa-book-open"></i> Respuesta Modelo de tus Apuntes
+                            </div>
+                            <p class="text-slate-200">${escapeHtml(item.modelAnswer)}</p>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function toggleOpenHint(qId) {
+            const el = document.getElementById(`open-hint-${qId}`);
+            if (el) el.classList.toggle('hidden');
+        }
+
+        function toggleModelAnswer(qId) {
+            const el = document.getElementById(`open-model-${qId}`);
+            if (el) el.classList.toggle('hidden');
+        }
+
+        function markOpenQuestionPassed(qId) {
+            if (!completedOpen.includes(qId)) {
+                completedOpen.push(qId);
+                updateXP(30);
+                updateOpenCounter();
+                showToast('¡Pregunta abierta superada! +30 XP');
+            }
+
+            const statusBadge = document.getElementById(`open-status-${qId}`);
+            if (statusBadge) {
+                statusBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-bio-100 text-bio-800';
+                statusBadge.innerHTML = '<i class="fa-solid fa-circle-check text-bio-600"></i> Superada (+30 XP)';
+            }
+
+            const card = document.getElementById(`open-card-${qId}`);
+            if (card) {
+                card.classList.remove('border-slate-200');
+                card.classList.add('border-bio-300', 'bg-bio-50/10');
+            }
+        }
+
+        function evaluateOpenQuestion(qId) {
+            const item = studyState.openQuestions.find(q => q.id === qId);
+            if (!item) return;
+
+            const textarea = document.getElementById(`open-textarea-${qId}`);
+            const normText = normalizeText(textarea ? textarea.value : '');
+
+            if (!normText || normText.length < 3) {
+                showToast('Escribe tu respuesta antes de comprobar.', true);
+                if (textarea) textarea.focus();
+                return;
+            }
+
+            const matchedGroups = [];
+            const missingGroups = [];
+
+            item.keyGroups.forEach(group => {
+                const isMatched = group.keywords.some(kw => {
+                    const normKw = normalizeText(kw);
+                    return normKw && normText.includes(normKw);
+                });
+                if (isMatched) matchedGroups.push(group.label);
+                else missingGroups.push(group.label);
+            });
+
+            const fb = document.getElementById(`open-feedback-${qId}`);
+            const modelEl = document.getElementById(`open-model-${qId}`);
+            fb.classList.remove('hidden', 'bg-bio-50', 'border-bio-200', 'text-bio-900', 'bg-amber-50', 'border-amber-200', 'text-amber-900', 'bg-red-50', 'border-red-200', 'text-red-900');
+
+            const matchedHtml = matchedGroups.map(l => `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-bio-100 text-bio-800 font-semibold text-[11px] border border-bio-200">
+                    <i class="fa-solid fa-check text-bio-600"></i> ${escapeHtml(l)}
+                </span>
+            `).join('');
+
+            const missingHtml = missingGroups.map(l => `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-semibold text-[11px] border border-amber-300">
+                    <i class="fa-solid fa-circle-exclamation text-amber-600"></i> Falta: ${escapeHtml(l)}
+                </span>
+            `).join('');
+
+            if (missingGroups.length === 0) {
+                fb.classList.add('bg-bio-50', 'border', 'border-bio-200', 'text-bio-900');
+                fb.innerHTML = `
+                    <div class="font-bold text-bio-700 text-xs sm:text-sm">
+                        <i class="fa-solid fa-circle-check"></i> ¡Respuesta completa y acertada! (+30 XP)
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">${matchedHtml}</div>
+                `;
+                if (modelEl) modelEl.classList.remove('hidden');
+                markOpenQuestionPassed(qId);
+            } else if (matchedGroups.length > 0) {
+                fb.classList.add('bg-amber-50', 'border', 'border-amber-200', 'text-amber-900');
+                fb.innerHTML = `
+                    <div class="font-bold text-amber-800">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Respuesta parcial: añade los conceptos clave que faltan o autovalida si lo explicaste con otros sinónimos.
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">${matchedHtml}${missingHtml}</div>
+                    <div class="pt-1">
+                        <button type="button" onclick="markOpenQuestionPassed(${qId})" class="bg-bio-600 hover:bg-bio-700 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] transition-colors">
+                            <i class="fa-solid fa-check"></i> Dar por válida mi redacción (+30 XP)
+                        </button>
+                    </div>
+                `;
+            } else {
+                fb.classList.add('bg-red-50', 'border', 'border-red-200', 'text-red-900');
+                fb.innerHTML = `
+                    <div class="font-bold text-red-700">
+                        <i class="fa-solid fa-circle-xmark"></i> No se detectan los conceptos clave necesarios. Revisa la pista o la respuesta modelo.
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">${missingHtml}</div>
+                    <div class="pt-1">
+                        <button type="button" onclick="markOpenQuestionPassed(${qId})" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] transition-colors">
+                            <i class="fa-solid fa-check"></i> Dar por válida mi redacción (+30 XP)
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // =========================================================
+        // 10. PESTAÑA 6: JUEGOS DE PRÁCTICA RÁPIDA
+        // =========================================================
+        let currentSequenceGameIdx = 0;
+        let userMethodSeq = [];
+        let currentSpeedItem = null;
+        let streak = 0;
+
+        function initGames() {
+            if (!studyState.hasContent) return;
+            currentSequenceGameIdx = 0;
+            const nextSeqBtn = document.getElementById('next-sequence-game-btn');
+            if (studyState.sequences.length > 1) {
+                nextSeqBtn.classList.remove('hidden');
+            } else {
+                nextSeqBtn.classList.add('hidden');
+            }
+            resetMethodGame();
+            setupSpeedClassifierButtons();
+            nextSpeedQuestion();
+        }
+
+        function switchSequenceInGame() {
+            if (studyState.sequences.length <= 1) return;
+            currentSequenceGameIdx = (currentSequenceGameIdx + 1) % studyState.sequences.length;
+            resetMethodGame();
+        }
+
+        function resetMethodGame() {
+            userMethodSeq = [];
+            const pool = document.getElementById('method-steps-pool');
+            pool.innerHTML = '';
+            document.getElementById('method-user-sequence').innerHTML = '<span class="text-xs text-slate-400">Pulsa los botones de arriba en orden...</span>';
+            document.getElementById('method-game-feedback').innerText = '';
+
+            const seq = studyState.sequences[currentSequenceGameIdx];
+            if (!seq || seq.steps.length === 0) return;
+
+            document.getElementById('sequence-game-subtitle').innerText = `Ordena las ${seq.steps.length} etapas de: «${seq.title}»`;
+
+            const shuffled = [...seq.steps].sort(() => Math.random() - 0.5);
+            shuffled.forEach(step => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl text-xs border border-slate-300 transition-all text-left';
+                btn.innerText = step;
+                btn.onclick = () => selectMethodStep(step, btn);
+                pool.appendChild(btn);
+            });
+        }
+
+        function selectMethodStep(step, btn) {
+            userMethodSeq.push(step);
+            btn.disabled = true;
+            btn.classList.add('opacity-40', 'cursor-not-allowed');
+
+            const seqDiv = document.getElementById('method-user-sequence');
+            if (userMethodSeq.length === 1) seqDiv.innerHTML = '';
+
+            const badge = document.createElement('span');
+            badge.className = 'bg-science-100 text-science-800 font-bold px-2.5 py-1 rounded-lg text-xs border border-science-300 flex items-center gap-1 animate-fade-in';
+            badge.innerText = `${userMethodSeq.length}. ${step}`;
+            seqDiv.appendChild(badge);
+        }
+
+        function checkMethodOrder() {
+            const seq = studyState.sequences[currentSequenceGameIdx];
+            if (!seq) return;
+            const fb = document.getElementById('method-game-feedback');
+
+            if (userMethodSeq.length !== seq.steps.length) {
+                fb.className = 'text-xs font-bold text-amber-600';
+                fb.innerText = `¡Debes seleccionar los ${seq.steps.length} elementos antes de comprobar!`;
+                return;
+            }
+
+            const isCorrect = userMethodSeq.every((val, idx) => val === seq.steps[idx]);
+            if (isCorrect) {
+                fb.className = 'text-xs font-bold text-bio-600';
+                fb.innerText = '🎉 ¡Perfecto! Has ordenado la secuencia correctamente. (+50 XP)';
+                updateXP(50);
+            } else {
+                fb.className = 'text-xs font-bold text-red-600';
+                fb.innerText = `❌ Orden incorrecto. El orden correcto es: ${seq.steps.join(' → ')}`;
+            }
+        }
+
+        // Clasificador Relámpago adaptado a bloques (o Concepto/Definición vs Dato/Proceso si solo hay 1 bloque)
+        function setupSpeedClassifierButtons() {
+            const btnGrid = document.getElementById('speed-buttons');
+            const subtitle = document.getElementById('speed-game-subtitle');
+            btnGrid.innerHTML = '';
+
+            const hoverStyles = [
+                'hover:bg-purple-100 hover:text-purple-800',
+                'hover:bg-teal-100 hover:text-teal-800',
+                'hover:bg-amber-100 hover:text-amber-800',
+                'hover:bg-bio-100 hover:text-bio-800'
+            ];
+
+            if (studyState.blocks.length >= 2) {
+                subtitle.innerText = '¿A qué Bloque / Tema de tus apuntes pertenece este concepto? (+10 XP)';
+                const activeBlocks = studyState.blocks.slice(0, 4);
+                activeBlocks.forEach((b, idx) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = `speed-btn bg-slate-100 ${hoverStyles[idx % hoverStyles.length]} text-slate-700 font-bold py-3 px-3 rounded-xl text-xs border border-slate-200 transition-all truncate`;
+                    btn.innerText = b.title;
+                    btn.title = b.title;
+                    btn.onclick = () => answerSpeed(String(b.id), b.title);
+                    btnGrid.appendChild(btn);
+                });
+            } else {
+                subtitle.innerText = 'Clasifica si el elemento es una Definición formal o un Dato / Proceso / Ejemplo (+10 XP)';
+                const modes = [
+                    { key: 'definition', label: 'Concepto / Definición' },
+                    { key: 'fact', label: 'Dato / Proceso / Ejemplo' }
+                ];
+                modes.forEach((m, idx) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = `speed-btn bg-slate-100 ${hoverStyles[idx]} text-slate-700 font-bold py-3 px-3 rounded-xl text-xs border border-slate-200 transition-all`;
+                    btn.innerText = m.label;
+                    btn.onclick = () => answerSpeed(m.key, m.label);
+                    btnGrid.appendChild(btn);
+                });
+            }
+        }
+
+        function nextSpeedQuestion() {
+            if (studyState.concepts.length === 0) return;
+
+            let pool = studyState.concepts;
+            if (studyState.blocks.length >= 2) {
+                const allowedBlockIds = new Set(studyState.blocks.slice(0, 4).map(b => b.id));
+                const filteredPool = studyState.concepts.filter(c => allowedBlockIds.has(c.blockId));
+                if (filteredPool.length > 0) pool = filteredPool;
+            }
+
+            let candidate = pool[Math.floor(Math.random() * pool.length)];
+            if (pool.length > 1 && currentSpeedItem && candidate.id === currentSpeedItem.id) {
+                const idx = pool.findIndex(c => c.id === candidate.id);
+                candidate = pool[(idx + 1) % pool.length];
+            }
+            currentSpeedItem = candidate;
+
+            document.getElementById('speed-concept').innerText = candidate.term;
+            document.getElementById('speed-subclue').innerText = candidate.definition;
+            document.getElementById('speed-feedback').innerText = '';
+        }
+
+        function answerSpeed(selectedKey, selectedLabel) {
+            if (!currentSpeedItem) return;
+            const fb = document.getElementById('speed-feedback');
+
+            let isCorrect = false;
+            let expectedLabel = '';
+
+            if (studyState.blocks.length >= 2) {
+                isCorrect = String(currentSpeedItem.blockId) === selectedKey;
+                expectedLabel = currentSpeedItem.blockTitle;
+            } else {
+                const actualType = currentSpeedItem.type === 'definition' ? 'definition' : 'fact';
+                isCorrect = actualType === selectedKey;
+                expectedLabel = actualType === 'definition' ? 'Concepto / Definición' : 'Dato / Proceso / Ejemplo';
+            }
+
+            if (isCorrect) {
+                streak++;
+                updateXP(10);
+                fb.className = 'text-center text-xs font-bold text-bio-600';
+                fb.innerText = '¡Correcto! (+10 XP)';
+            } else {
+                streak = 0;
+                fb.className = 'text-center text-xs font-bold text-red-600';
+                fb.innerText = `Incorrecto. Pertenecía a: ${expectedLabel}`;
+            }
+
+            document.getElementById('streak-count').innerText = `${streak} 🔥`;
+            setTimeout(nextSpeedQuestion, 750);
+        }
+
+        // =========================================================
+        // 11. PESTAÑA 7: SIMULACRO DE EXAMEN (CON REPETIR FALLOS)
+        // =========================================================
+        let currentExamIndex = 0;
+        let userExamAnswers = [];
+        let isRetryMistakesMode = false;
+
+        function resetExamSetupUI() {
+            document.getElementById('exam-start-card').classList.remove('hidden');
+            document.getElementById('exam-active-screen').classList.add('hidden');
+            document.getElementById('exam-results-screen').classList.add('hidden');
+            document.getElementById('exam-total-badge').innerText = studyState.examQuestions.length;
+        }
+
+        function startExam(keepCorrect = false) {
+            if (studyState.examQuestions.length === 0) {
+                showToast('Se necesitan al menos 4 conceptos en tus apuntes para generar preguntas tipo test.', true);
+                return;
+            }
+
+            document.getElementById('exam-start-card').classList.add('hidden');
+            document.getElementById('exam-results-screen').classList.add('hidden');
+            document.getElementById('exam-active-screen').classList.remove('hidden');
+
+            isRetryMistakesMode = keepCorrect;
+            const retryBadge = document.getElementById('exam-retry-badge');
+
+            if (!keepCorrect || userExamAnswers.length !== studyState.examQuestions.length) {
+                userExamAnswers = new Array(studyState.examQuestions.length).fill(null);
+                currentExamIndex = 0;
+                retryBadge.classList.add('hidden');
+            } else {
+                retryBadge.classList.remove('hidden');
+                const firstUnanswered = userExamAnswers.findIndex(ans => ans === null);
+                currentExamIndex = firstUnanswered !== -1 ? firstUnanswered : 0;
+            }
+
+            document.getElementById('exam-total-num').innerText = studyState.examQuestions.length;
+            renderExamDots();
+            showExamQuestion();
+        }
+
+        function renderExamDots() {
+            const dotsNav = document.getElementById('exam-dots-nav');
+            dotsNav.innerHTML = '';
+            studyState.examQuestions.forEach((_, idx) => {
+                const dot = document.createElement('button');
+                dot.type = 'button';
+                dot.id = `exam-dot-${idx}`;
+                dot.title = `Ir a pregunta ${idx + 1}`;
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-200 transition-all cursor-pointer';
+                dot.onclick = () => {
+                    currentExamIndex = idx;
+                    showExamQuestion();
+                };
+                dotsNav.appendChild(dot);
+            });
+        }
+
+        function showExamQuestion() {
+            const q = studyState.examQuestions[currentExamIndex];
+            if (!q) return;
+
+            document.getElementById('exam-current-num').innerText = currentExamIndex + 1;
+            document.getElementById('exam-question-text').innerText = q.q;
+
+            const solvedTag = document.getElementById('exam-already-solved-tag');
+            if (isRetryMistakesMode && userExamAnswers[currentExamIndex] === q.correct) {
+                solvedTag.classList.remove('hidden');
+            } else {
+                solvedTag.classList.add('hidden');
+            }
+
+            studyState.examQuestions.forEach((questionItem, idx) => {
+                const dot = document.getElementById(`exam-dot-${idx}`);
+                if (!dot) return;
+                if (idx === currentExamIndex) {
+                    dot.className = 'w-4 h-2.5 rounded-full bg-bio-600 transition-all cursor-pointer';
+                } else if (isRetryMistakesMode && userExamAnswers[idx] === questionItem.correct) {
+                    dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 transition-all cursor-pointer';
+                } else if (userExamAnswers[idx] !== null) {
+                    dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500 transition-all cursor-pointer';
+                } else {
+                    dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-200 transition-all cursor-pointer';
+                }
+            });
+
+            const container = document.getElementById('exam-options-container');
+            container.innerHTML = '';
+
+            q.options.forEach((optText, optIdx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                const isSelected = userExamAnswers[currentExamIndex] === optIdx;
+                btn.className = `w-full text-left p-4 rounded-2xl border text-xs sm:text-sm font-semibold transition-all flex items-center justify-between gap-3 ${
+                    isSelected
+                        ? 'border-bio-600 bg-bio-50 text-bio-900 shadow-sm'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                }`;
+                btn.innerHTML = `
+                    <span>${escapeHtml(optText)}</span>
+                    <i class="fa-solid ${isSelected ? 'fa-circle-check text-bio-600' : 'fa-circle text-slate-300'} flex-shrink-0"></i>
+                `;
+                btn.onclick = () => selectExamAnswer(optIdx);
+                container.appendChild(btn);
+            });
+
+            document.getElementById('exam-prev-btn').disabled = currentExamIndex === 0;
+            const nextBtn = document.getElementById('exam-next-btn');
+            if (currentExamIndex === studyState.examQuestions.length - 1) {
+                nextBtn.innerText = 'Finalizar y Corregir 🏆';
+                nextBtn.className = 'text-xs font-bold bg-amber-500 text-white px-5 py-2.5 rounded-xl hover:bg-amber-600 shadow-sm transition-colors';
+            } else {
+                nextBtn.innerText = 'Siguiente →';
+                nextBtn.className = 'text-xs font-bold bg-bio-600 text-white px-5 py-2.5 rounded-xl hover:bg-bio-700 shadow-sm transition-colors';
+            }
+        }
+
+        function selectExamAnswer(optionIndex) {
+            userExamAnswers[currentExamIndex] = optionIndex;
+            showExamQuestion();
+        }
+
+        function prevExamQuestion() {
+            if (currentExamIndex > 0) {
+                currentExamIndex--;
+                showExamQuestion();
+            }
+        }
+
+        function nextExamQuestion() {
+            if (currentExamIndex < studyState.examQuestions.length - 1) {
+                currentExamIndex++;
+                showExamQuestion();
+            } else {
+                finishExam();
+            }
+        }
+
+        function finishExam() {
+            let correctCount = 0;
+            studyState.examQuestions.forEach((q, idx) => {
+                if (userExamAnswers[idx] === q.correct) correctCount++;
+            });
+
+            const score = ((correctCount / studyState.examQuestions.length) * 10).toFixed(1);
+
+            document.getElementById('exam-active-screen').classList.add('hidden');
+            document.getElementById('exam-results-screen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+
+            const msg = document.getElementById('exam-feedback-msg');
+            if (parseFloat(score) >= 9) {
+                msg.innerText = '🎉 ¡SOBRESALIENTE! Dominas estos apuntes a nivel de 10.';
+                updateXP(150);
+            } else if (parseFloat(score) >= 7) {
+                msg.innerText = '👍 ¡Notable alto! Repasa los pequeños fallos para rozar la perfección.';
+                updateXP(80);
+            } else {
+                msg.innerText = '📚 Buen intento. Repasa las tarjetas y definiciones y repite los fallos.';
+                updateXP(30);
+            }
+
+            const list = document.getElementById('exam-breakdown-list');
+            list.innerHTML = '';
+            let hasMistakes = false;
+
+            studyState.examQuestions.forEach((q, idx) => {
+                const userAns = userExamAnswers[idx];
+                const isCorrect = userAns === q.correct;
+                if (!isCorrect) hasMistakes = true;
+
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-2xl border ${isCorrect ? 'bg-bio-50/60 border-bio-200' : 'bg-red-50/60 border-red-200'}`;
+                card.innerHTML = `
+                    <div class="font-bold text-slate-800 mb-1">${escapeHtml(q.q)}</div>
+                    <div class="space-y-1">
+                        <div class="${isCorrect ? 'text-bio-700 font-semibold' : 'text-red-600'}">
+                            Tu respuesta: ${userAns !== null ? escapeHtml(q.options[userAns]) : '<em>Sin responder</em>'}
+                        </div>
+                        ${!isCorrect ? `<div class="text-bio-800 font-bold">Respuesta correcta: ${escapeHtml(q.options[q.correct])}</div>` : ''}
+                        <div class="text-slate-500 italic mt-1">${escapeHtml(q.explain)}</div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+
+            const repeatBtn = document.getElementById('repeat-mistakes-btn');
+            if (hasMistakes) repeatBtn.classList.remove('hidden');
+            else repeatBtn.classList.add('hidden');
+        }
+
+        function repeatMistakes() {
+            studyState.examQuestions.forEach((q, idx) => {
+                if (userExamAnswers[idx] !== q.correct) {
+                    userExamAnswers[idx] = null;
+                }
+            });
+            startExam(true);
+        }
+
+        // =========================================================
+        // 12. MODAL EDITOR MANUAL DE ÍTEMS GENERADOS
+        // =========================================================
+        let activeEditorSubtab = 'concepts';
+        let draftConcepts = [];
+        let draftDefinitions = [];
+        let draftOpenQuestions = [];
+
+        function openEditorModal() {
+            if (!studyState.hasContent) return;
+            // Clonar datos actuales al borrador de edición
+            draftConcepts = JSON.parse(JSON.stringify(studyState.concepts));
+            draftDefinitions = JSON.parse(JSON.stringify(studyState.definitions));
+            draftOpenQuestions = JSON.parse(JSON.stringify(studyState.openQuestions));
+
+            updateEditorCounts();
+            document.getElementById('editor-modal').classList.remove('hidden');
+            switchEditorSubtab('concepts');
+        }
+
+        function closeEditorModal() {
+            document.getElementById('editor-modal').classList.add('hidden');
+        }
+
+        function updateEditorCounts() {
+            document.getElementById('ed-count-concepts').innerText = draftConcepts.length;
+            document.getElementById('ed-count-defs').innerText = draftDefinitions.length;
+            document.getElementById('ed-count-open').innerText = draftOpenQuestions.length;
+        }
+
+        function switchEditorSubtab(subtab) {
+            activeEditorSubtab = subtab;
+            document.querySelectorAll('.ed-subtab').forEach(btn => {
+                btn.className = 'ed-subtab px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900';
+            });
+            const activeBtn = document.getElementById(`ed-tab-${subtab}`);
+            if (activeBtn) {
+                activeBtn.className = 'ed-subtab px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-bio-700 shadow-sm';
+            }
+            renderEditorModalBody();
+        }
+
+        function renderEditorModalBody() {
+            const body = document.getElementById('editor-modal-body');
+            body.innerHTML = '';
+
+            if (activeEditorSubtab === 'concepts') {
+                draftConcepts.forEach((c, idx) => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-4 rounded-2xl border border-slate-200 space-y-2.5 shadow-sm';
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-bold text-slate-400">Tarjeta #${idx + 1} · Bloque: ${escapeHtml(c.blockTitle)}</span>
+                            <button type="button" onclick="deleteDraftItem('concepts', ${idx})" class="text-xs text-red-500 hover:text-red-700 font-bold">
+                                <i class="fa-solid fa-trash"></i> Eliminar
+                            </button>
+                        </div>
+                        <input type="text" value="${escapeHtml(c.term)}" onchange="draftConcepts[${idx}].term = this.value"
+                            placeholder="Concepto / Anverso"
+                            class="w-full px-3 py-2 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl" />
+                        <textarea rows="2" onchange="draftConcepts[${idx}].definition = this.value"
+                            placeholder="Definición / Reverso"
+                            class="w-full px-3 py-2 text-xs text-slate-700 bg-slate-50 border border-slate-300 rounded-xl">${escapeHtml(c.definition)}</textarea>
+                    `;
+                    body.appendChild(card);
+                });
+            } else if (activeEditorSubtab === 'defs') {
+                draftDefinitions.forEach((d, idx) => {
+                    const blanksStr = d.blanks.map(b => b.display).join(', ');
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-4 rounded-2xl border border-slate-200 space-y-2.5 shadow-sm';
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-bold text-slate-400">Definición #${idx + 1} · Usa {0}, {1} para los huecos</span>
+                            <button type="button" onclick="deleteDraftItem('defs', ${idx})" class="text-xs text-red-500 hover:text-red-700 font-bold">
+                                <i class="fa-solid fa-trash"></i> Eliminar
+                            </button>
+                        </div>
+                        <textarea rows="2" onchange="draftDefinitions[${idx}].template = this.value"
+                            class="w-full px-3 py-2 text-xs text-slate-700 bg-slate-50 border border-slate-300 rounded-xl">${escapeHtml(d.template)}</textarea>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-bold text-slate-600 whitespace-nowrap">Palabras ocultas (separadas por coma):</span>
+                            <input type="text" value="${escapeHtml(blanksStr)}" onchange="updateDraftDefBlanks(${idx}, this.value)"
+                                class="w-full px-3 py-1.5 text-xs font-semibold text-bio-800 bg-bio-50 border border-bio-200 rounded-xl" />
+                        </div>
+                    `;
+                    body.appendChild(card);
+                });
+            } else if (activeEditorSubtab === 'open') {
+                draftOpenQuestions.forEach((q, idx) => {
+                    const kwStr = q.keyGroups.map(g => g.label).join(', ');
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-4 rounded-2xl border border-slate-200 space-y-2.5 shadow-sm';
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-bold text-slate-400">Pregunta Abierta #${idx + 1}</span>
+                            <button type="button" onclick="deleteDraftItem('open', ${idx})" class="text-xs text-red-500 hover:text-red-700 font-bold">
+                                <i class="fa-solid fa-trash"></i> Eliminar
+                            </button>
+                        </div>
+                        <input type="text" value="${escapeHtml(q.question)}" onchange="draftOpenQuestions[${idx}].question = this.value"
+                            class="w-full px-3 py-2 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl" />
+                        <textarea rows="2" onchange="draftOpenQuestions[${idx}].modelAnswer = this.value"
+                            placeholder="Respuesta modelo"
+                            class="w-full px-3 py-2 text-xs text-slate-700 bg-slate-50 border border-slate-300 rounded-xl">${escapeHtml(q.modelAnswer)}</textarea>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-bold text-slate-600 whitespace-nowrap">Palabras clave requeridas:</span>
+                            <input type="text" value="${escapeHtml(kwStr)}" onchange="updateDraftOpenKws(${idx}, this.value)"
+                                class="w-full px-3 py-1.5 text-xs font-semibold text-purple-800 bg-purple-50 border border-purple-200 rounded-xl" />
+                        </div>
+                    `;
+                    body.appendChild(card);
+                });
+            }
+        }
+
+        function updateDraftDefBlanks(idx, commaStr) {
+            const words = commaStr.split(',').map(w => w.trim()).filter(Boolean);
+            if (words.length > 0) {
+                draftDefinitions[idx].blanks = words.map(w => ({
+                    accepted: buildAcceptedVariants(w),
+                    display: w
+                }));
+            }
+        }
+
+        function updateDraftOpenKws(idx, commaStr) {
+            const words = commaStr.split(',').map(w => w.trim()).filter(Boolean);
+            if (words.length > 0) {
+                draftOpenQuestions[idx].keyGroups = words.map(w => ({
+                    label: w,
+                    keywords: buildAcceptedVariants(w)
+                }));
+                draftOpenQuestions[idx].hint = `Incluye ideas relacionadas con: ${words.join(', ')}.`;
+            }
+        }
+
+        function deleteDraftItem(listType, idx) {
+            if (listType === 'concepts') draftConcepts.splice(idx, 1);
+            if (listType === 'defs') draftDefinitions.splice(idx, 1);
+            if (listType === 'open') draftOpenQuestions.splice(idx, 1);
+            updateEditorCounts();
+            renderEditorModalBody();
+        }
+
+        function addNewItemInEditor() {
+            const defaultBlock = studyState.blocks[0] || { id: 1, title: studyState.subjectTitle || 'General' };
+            if (activeEditorSubtab === 'concepts') {
+                draftConcepts.unshift({
+                    id: Date.now(),
+                    blockId: defaultBlock.id,
+                    blockTitle: defaultBlock.title,
+                    term: 'Nuevo concepto',
+                    definition: 'Escribe aquí la definición o explicación.',
+                    rawLine: '',
+                    type: 'definition'
+                });
+            } else if (activeEditorSubtab === 'defs') {
+                draftDefinitions.unshift({
+                    id: Date.now(),
+                    blockId: defaultBlock.id,
+                    blockTitle: defaultBlock.title,
+                    title: 'Nueva definición con huecos',
+                    template: 'Completa el concepto {0} en esta frase de ejemplo.',
+                    rawSentence: 'Completa el concepto clave en esta frase de ejemplo.',
+                    blanks: [{ accepted: ['clave'], display: 'clave' }],
+                    distractorWord: 'distractor',
+                    explain: 'Definición personalizada.'
+                });
+            } else if (activeEditorSubtab === 'open') {
+                draftOpenQuestions.unshift({
+                    id: Date.now(),
+                    blockId: defaultBlock.id,
+                    blockTitle: defaultBlock.title,
+                    question: 'Explica con tus palabras este nuevo concepto:',
+                    hint: 'Menciona la palabra clave principal.',
+                    keyGroups: [{ label: 'concepto', keywords: ['concepto'] }],
+                    modelAnswer: 'Respuesta modelo personalizada.'
+                });
+            }
+            updateEditorCounts();
+            renderEditorModalBody();
+        }
+
+        function saveEditorChanges() {
+            studyState.concepts = draftConcepts;
+            studyState.definitions = draftDefinitions;
+            studyState.openQuestions = draftOpenQuestions;
+            studyState.examQuestions = buildBalancedExamQuestions(studyState.concepts, studyState.sequences, studyState.blocks);
+
+            syncEmptyOrActiveStates();
+            refreshAllStudyViews();
+            closeEditorModal();
+            showToast('🛠️ Cambios aplicados a todas las actividades.');
+        }
+
+        // =========================================================
+        // 13. INICIALIZACIÓN AL CARGAR LA PÁGINA (ESTADO LIMPIO)
+        // =========================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            updateXP(0);
+            renderSavedDecksList();
+            syncEmptyOrActiveStates();
+        });
+    </script>
+</body>
+</html>
