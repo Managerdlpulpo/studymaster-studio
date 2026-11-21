@@ -145,3 +145,34 @@ app-apuntes/
 │   └── studymaster_original.html   ← el mismo código sin el envoltorio ```html (para comparar)
 └── tools/                          ← pruebas automáticas (unit.js, e2e.js, probe.js, fixtures/)
 ```
+
+---
+
+## 8. Acceso oculto a la vista del profesor (actualización)
+
+La pestaña «Profesor» **ya no aparece en la navegación** (ni en escritorio ni en móvil) y ningún texto visible para el alumno menciona que existe. A los alumnos solo se les dice que descarguen su informe y se lo entreguen al profesor.
+
+### Cómo entrar
+- **Gesto:** toca o haz clic **5 veces seguidas sobre el logo o el título «StudyMaster»** (arriba a la izquierda) en menos de 3 segundos. Funciona también en móvil y tableta.
+- **Atajo de teclado:** **Ctrl + Shift + P** (en Mac, Cmd + Shift + P). Firefox reserva Ctrl + Shift + P para la ventana privada; ahí usa **Ctrl + Alt + P**.
+- Se abre un cuadro discreto titulado «Acceso restringido» que pide el PIN. No hay ningún parámetro en la URL.
+
+### Primer uso en cada dispositivo
+1. La primera vez, el cuadro pide **crear un PIN o contraseña** (mínimo 6 caracteres) y repetirlo.
+2. Solo se guarda **un hash PBKDF2-SHA-256 con sal aleatoria** (200.000 iteraciones, Web Crypto) en el `localStorage` de ese navegador. El PIN no se guarda nunca en claro y **no hay ningún PIN en el código ni en el repositorio**.
+3. Las siguientes veces se pide el PIN. Tras **5 fallos** se impone una espera creciente (30 s, 60 s, 120 s… hasta 1 hora).
+4. Dentro de la vista hay dos botones: **«Cambiar PIN»** (pide el actual) y **«Salir del modo profesor»**.
+5. El modo profesor dura **solo hasta recargar o cerrar la pestaña**. Se guarda únicamente en memoria; no se usa `sessionStorage` porque sobreviviría a una recarga. Al salir o recargar se descartan los informes cargados.
+6. Cada dispositivo (ordenador de clase, portátil de casa…) tiene su propio PIN, que se crea la primera vez que se entra en él.
+
+### Si olvidas el PIN
+En el cuadro del PIN pulsa **«¿Has olvidado el PIN?»** dos veces (la segunda confirma) y después **«Sí, borrar el PIN de este dispositivo»**. Se borran **solo los datos de profesor de ese dispositivo**: el hash del PIN, el contador de intentos y los informes cargados en la sesión. **Los temarios, apuntes y progreso de estudio no se tocan.** Luego puedes crear un PIN nuevo.
+
+### Limitación (léela)
+Es una web estática: todo el código está en el navegador y se puede leer (también en GitHub). Ocultar la pestaña con PIN es **protección de interfaz** para que los alumnos no la encuentren ni la usen por curiosidad, **no seguridad fuerte**: alguien con conocimientos técnicos podría mostrar la sección desde las herramientas del navegador o borrar el PIN de *su propio* navegador. Aun así **no expone datos de nadie**: la vista del profesor solo muestra los informes que el profesor carga en ese momento desde su dispositivo; no hay servidor ni base de datos con informes de la clase. Lo único que podría ver un alumno así es una tabla vacía. Para una protección real (y para recoger informes automáticamente) haría falta un servidor con inicio de sesión.
+
+Otras notas:
+- El acceso necesita una conexión segura (**https**), porque Web Crypto solo funciona así. Por `http://` el cuadro avisa y no deja entrar.
+- «Borrar todos mis datos de este dispositivo» (pie de página) también borra el PIN de ese navegador.
+
+Pruebas añadidas en `tools/e2e.js`: la pestaña no está en la navegación ni en ningún texto visible; 4 toques no abren nada y 5 sí; creación de PIN (rechaza PIN corto y confirmación distinta); se guarda solo un hash; un PIN erróneo se rechaza y el correcto da acceso; Ctrl+Shift+P; cambiar PIN; espera tras 5 fallos; al recargar vuelve a ocultarse; restablecer borra solo el PIN.

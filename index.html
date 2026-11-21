@@ -108,7 +108,7 @@
     <!-- ===================================================================== -->
     <header class="bg-gradient-to-r from-bio-800 via-bio-700 to-teal-800 text-white shadow-lg sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-3">
-            <div class="flex items-center space-x-3">
+            <div id="app-brand" class="flex items-center space-x-3 select-none">
                 <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-md border border-white/20">
                     <i class="fa-solid fa-wand-magic-sparkles text-2xl text-bio-200"></i>
                 </div>
@@ -167,9 +167,6 @@
                 </button>
                 <button type="button" role="tab" aria-controls="tab-progreso" onclick="switchTab('progreso')" id="tab-btn-progreso" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-slate-200 hover:bg-white/5">
                     <i class="fa-solid fa-chart-line text-sky-300"></i> 📈 Mi Progreso
-                </button>
-                <button type="button" role="tab" aria-controls="tab-profesor" onclick="switchTab('profesor')" id="tab-btn-profesor" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 text-slate-200 hover:bg-white/5">
-                    <i class="fa-solid fa-chalkboard-user text-orange-300"></i> 👩‍🏫 Profesor
                 </button>
             </div>
         </nav>
@@ -845,7 +842,14 @@
         <!-- ================================================================= -->
         <section id="tab-profesor" class="tab-content hidden space-y-6" role="tabpanel">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-                <h2 class="text-xl font-extrabold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-chalkboard-user text-orange-500"></i> Vista del profesor</h2>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-xl font-extrabold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-chalkboard-user text-orange-500"></i> Vista del profesor</h2>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-[11px] font-bold bg-orange-100 text-orange-800 px-2.5 py-1 rounded-full"><i class="fa-solid fa-lock-open"></i> Modo profesor activo (hasta cerrar o recargar)</span>
+                        <button type="button" id="teacher-change-pin-btn" onclick="openTeacherPinDialog('change')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs border border-slate-200"><i class="fa-solid fa-key"></i> Cambiar PIN</button>
+                        <button type="button" id="teacher-exit-btn" onclick="exitTeacherMode()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-3 py-1.5 rounded-xl text-xs"><i class="fa-solid fa-right-from-bracket"></i> Salir del modo profesor</button>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-600">
                     <div class="p-4 rounded-xl bg-orange-50 border border-orange-200 space-y-1.5">
                         <div class="font-bold text-orange-800">1. Preparar material para la clase</div>
@@ -927,6 +931,34 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Cuadro de acceso restringido (entrada secreta) -->
+    <div id="teacher-pin-modal" class="fixed inset-0 z-[60] hidden bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="pin-title">
+        <form id="teacher-pin-form" onsubmit="event.preventDefault(); submitTeacherPin();" class="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4 animate-fade-in" autocomplete="off">
+            <div class="flex items-center justify-between">
+                <h3 id="pin-title" class="font-extrabold text-slate-800 text-base flex items-center gap-2"><i class="fa-solid fa-lock text-slate-500"></i> <span id="pin-title-text">Acceso restringido</span></h3>
+                <button type="button" onclick="closeTeacherPinDialog()" class="text-slate-400 hover:text-slate-700 p-1" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p id="pin-help" class="text-xs text-slate-500"></p>
+            <div id="pin-field-current-wrap" class="space-y-1">
+                <label for="pin-field-current" class="text-[11px] font-bold text-slate-600">PIN actual</label>
+                <input type="password" id="pin-field-current" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-bio-500" autocomplete="off" />
+            </div>
+            <div id="pin-field-main-wrap" class="space-y-1">
+                <label for="pin-field-main" id="pin-field-main-label" class="text-[11px] font-bold text-slate-600">PIN</label>
+                <input type="password" id="pin-field-main" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-bio-500" autocomplete="off" />
+            </div>
+            <div id="pin-field-confirm-wrap" class="space-y-1">
+                <label for="pin-field-confirm" class="text-[11px] font-bold text-slate-600">Repite el PIN</label>
+                <input type="password" id="pin-field-confirm" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-bio-500" autocomplete="off" />
+            </div>
+            <div id="pin-message" class="hidden text-xs font-semibold rounded-xl p-2.5" role="alert"></div>
+            <button type="submit" id="pin-submit-btn" class="w-full bg-bio-600 hover:bg-bio-700 text-white font-bold py-2.5 rounded-xl text-sm">Entrar</button>
+            <div id="pin-reset-area" class="text-center">
+                <button type="button" id="pin-forgot-btn" onclick="handleTeacherPinReset()" class="text-[11px] text-slate-400 hover:text-red-600 underline underline-offset-2">¿Has olvidado el PIN?</button>
+            </div>
+        </form>
     </div>
 
     <!-- Pie de página -->
@@ -1158,6 +1190,11 @@
         // 3. NAVEGACIÓN ENTRE PESTAÑAS Y CONTROL DE ESTADO VACÍO
         // =========================================================
         function switchTab(tabId) {
+            // La vista de profesor solo se muestra con la sesión desbloqueada mediante PIN
+            if (tabId === 'profesor' && !teacherUnlocked) {
+                openTeacherPinDialog();
+                return;
+            }
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('bg-white/15', 'text-white', 'shadow-sm');
@@ -2339,7 +2376,7 @@ El ciclo hidrológico permite que el agua circule continuamente por la hidrosfer
             try {
                 const parsed = JSON.parse(await readFileAs(file, 'text'));
                 if (parsed && parsed.type === 'studymaster-progress-report') {
-                    showToast('Esto es un informe de progreso de un alumno: cárgalo en la pestaña 👩‍🏫 Profesor.', true);
+                    showToast('Este archivo es un informe de progreso, no un temario de estudio.', true);
                     return;
                 }
                 const deck = sanitizeDeck(parsed);
@@ -3261,7 +3298,7 @@ El ciclo hidrológico permite que el agua circule continuamente por la hidrosfer
                 completedOpen.push(qId);
                 updateXP(selfValidated ? 15 : 30);
                 updateOpenCounter();
-                showToast(selfValidated ? 'Marcada como válida por ti (+15 XP). Tu profesor la verá como autovalidada.' : '¡Pregunta abierta superada! +30 XP');
+                showToast(selfValidated ? 'Marcada como válida por ti (+15 XP). En tu informe aparecerá como autovalidada.' : '¡Pregunta abierta superada! +30 XP');
             }
             persistProgress();
 
@@ -4156,6 +4193,7 @@ El ciclo hidrológico permite que el agua circule continuamente por la hidrosfer
         }
 
         async function handleTeacherReports(event) {
+            if (!teacherUnlocked) { event.target.value = ''; return; }
             const files = Array.from(event.target.files || []);
             event.target.value = '';
             let added = 0, rejected = 0;
@@ -4235,6 +4273,7 @@ El ciclo hidrológico permite que el agua circule continuamente por la hidrosfer
         }
 
         function exportTeacherCSV() {
+            if (!teacherUnlocked) return;
             if (teacherReports.length === 0) {
                 showToast('Carga primero algunos informes.', true);
                 return;
@@ -4256,6 +4295,268 @@ El ciclo hidrológico permite que el agua circule continuamente por la hidrosfer
         function clearTeacherReports() {
             teacherReports = [];
             renderTeacherView();
+        }
+
+
+        // =========================================================
+        // 14b. ENTRADA SECRETA AL MODO PROFESOR (PIN local con PBKDF2)
+        // Nota: en una web estática esto es protección de interfaz, no seguridad fuerte (ver REVISION.md).
+        // Gesto: 5 toques seguidos en el logo/título en menos de 3 s · Atajo: Ctrl+Shift+P (o Ctrl+Alt+P)
+        // =========================================================
+        const TEACHER_PIN_KEY = 'sm_teacher_pin';      // { v, alg, iter, salt, hash } (nunca el PIN en claro)
+        const TEACHER_LOCK_KEY = 'sm_teacher_lock';    // { fails, until }
+        const TEACHER_PIN_MIN = 6;
+        const TEACHER_PBKDF2_ITER = 200000;
+        const TEACHER_FREE_ATTEMPTS = 5;
+        // Solo en memoria: al recargar o cerrar la pestaña se vuelve a bloquear
+        // (sessionStorage sobreviviría a una recarga, por eso no se usa).
+        let teacherUnlocked = false;
+        let teacherPinMode = 'unlock';   // 'create' | 'unlock' | 'change' | 'reset'
+        let teacherPinBusy = false;
+
+        function bytesToB64(bytes) {
+            let s = '';
+            new Uint8Array(bytes).forEach(b => { s += String.fromCharCode(b); });
+            return btoa(s);
+        }
+        function b64ToBytes(b64) {
+            return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        }
+
+        function teacherCryptoAvailable() {
+            return !!(window.crypto && window.crypto.subtle && window.isSecureContext);
+        }
+
+        async function derivePinHash(pin, saltBytes, iterations) {
+            const keyMaterial = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+            const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: saltBytes, iterations }, keyMaterial, 256);
+            return bytesToB64(bits);
+        }
+
+        function getStoredTeacherPin() {
+            try {
+                const rec = JSON.parse(safeGetItem(TEACHER_PIN_KEY, 'null'));
+                if (rec && rec.alg === 'PBKDF2-SHA256' && rec.salt && rec.hash && rec.iter) return rec;
+            } catch (e) { /* dato dañado */ }
+            return null;
+        }
+
+        async function storeTeacherPin(pin) {
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const hash = await derivePinHash(pin, salt, TEACHER_PBKDF2_ITER);
+            return safeSetItem(TEACHER_PIN_KEY, JSON.stringify({ v: 1, alg: 'PBKDF2-SHA256', iter: TEACHER_PBKDF2_ITER, salt: bytesToB64(salt), hash }));
+        }
+
+        async function verifyTeacherPin(pin) {
+            const rec = getStoredTeacherPin();
+            if (!rec) return false;
+            const hash = await derivePinHash(pin, b64ToBytes(rec.salt), Number(rec.iter));
+            // comparación sin cortocircuito
+            let diff = hash.length ^ rec.hash.length;
+            for (let i = 0; i < Math.min(hash.length, rec.hash.length); i++) diff |= hash.charCodeAt(i) ^ rec.hash.charCodeAt(i);
+            return diff === 0;
+        }
+
+        function getTeacherLock() {
+            try {
+                const l = JSON.parse(safeGetItem(TEACHER_LOCK_KEY, 'null'));
+                if (l && typeof l.fails === 'number') return { fails: l.fails, until: Number(l.until) || 0 };
+            } catch (e) { /* nada */ }
+            return { fails: 0, until: 0 };
+        }
+
+        function registerTeacherFail() {
+            const l = getTeacherLock();
+            l.fails += 1;
+            if (l.fails >= TEACHER_FREE_ATTEMPTS) {
+                // espera creciente: 30 s, 60 s, 120 s... hasta 1 hora
+                const wait = Math.min(3600, 30 * Math.pow(2, l.fails - TEACHER_FREE_ATTEMPTS)) * 1000;
+                l.until = Date.now() + wait;
+            }
+            safeSetItem(TEACHER_LOCK_KEY, JSON.stringify(l));
+            return l;
+        }
+
+        function setPinMessage(text, kind = 'error') {
+            const el = document.getElementById('pin-message');
+            if (!text) { el.classList.add('hidden'); el.innerText = ''; return; }
+            el.className = 'text-xs font-semibold rounded-xl p-2.5 ' + (kind === 'error'
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : kind === 'warn' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-bio-50 text-bio-800 border border-bio-200');
+            el.innerText = text;
+        }
+
+        function configurePinDialog(mode) {
+            teacherPinMode = mode;
+            const show = (id, on) => document.getElementById(id).classList.toggle('hidden', !on);
+            const help = document.getElementById('pin-help');
+            const title = document.getElementById('pin-title-text');
+            const submit = document.getElementById('pin-submit-btn');
+            const mainLabel = document.getElementById('pin-field-main-label');
+            ['pin-field-current', 'pin-field-main', 'pin-field-confirm'].forEach(id => { document.getElementById(id).value = ''; });
+            setPinMessage('');
+            show('pin-field-current-wrap', mode === 'change');
+            show('pin-field-main-wrap', mode !== 'reset');
+            show('pin-field-confirm-wrap', mode === 'create' || mode === 'change');
+            show('pin-reset-area', mode === 'unlock');
+            submit.className = 'w-full font-bold py-2.5 rounded-xl text-sm text-white ' + (mode === 'reset' ? 'bg-red-600 hover:bg-red-700' : 'bg-bio-600 hover:bg-bio-700');
+            if (mode === 'create') {
+                title.innerText = 'Crear PIN de acceso';
+                help.innerText = `Primer acceso en este dispositivo. Crea un PIN o contraseña de al menos ${TEACHER_PIN_MIN} caracteres. Solo se guarda cifrado (hash) en este navegador.`;
+                mainLabel.innerText = 'Nuevo PIN';
+                submit.innerText = 'Crear PIN y entrar';
+            } else if (mode === 'change') {
+                title.innerText = 'Cambiar PIN';
+                help.innerText = `Escribe tu PIN actual y el nuevo (mínimo ${TEACHER_PIN_MIN} caracteres).`;
+                mainLabel.innerText = 'Nuevo PIN';
+                submit.innerText = 'Guardar nuevo PIN';
+            } else if (mode === 'reset') {
+                title.innerText = 'Restablecer acceso';
+                help.innerText = 'Se borrará el PIN de este dispositivo y los informes cargados en esta sesión. Los temarios, apuntes y progreso de estudio NO se tocan. Después podrás crear un PIN nuevo.';
+                submit.innerText = 'Sí, borrar el PIN de este dispositivo';
+            } else {
+                title.innerText = 'Acceso restringido';
+                help.innerText = 'Introduce el PIN.';
+                mainLabel.innerText = 'PIN';
+                submit.innerText = 'Entrar';
+            }
+            if (!teacherCryptoAvailable() && mode !== 'reset') {
+                setPinMessage('Este acceso necesita una conexión segura (https). Abre la app desde su dirección https.', 'warn');
+                submit.disabled = true;
+            } else {
+                submit.disabled = false;
+            }
+        }
+
+        function openTeacherPinDialog(forceMode) {
+            if (teacherUnlocked && forceMode !== 'change') { switchTab('profesor'); return; }
+            const mode = forceMode || (getStoredTeacherPin() ? 'unlock' : 'create');
+            configurePinDialog(mode);
+            document.getElementById('teacher-pin-modal').classList.remove('hidden');
+            const first = mode === 'change' ? 'pin-field-current' : 'pin-field-main';
+            setTimeout(() => { const el = document.getElementById(first); if (el) el.focus(); }, 30);
+        }
+
+        function closeTeacherPinDialog() {
+            document.getElementById('teacher-pin-modal').classList.add('hidden');
+            ['pin-field-current', 'pin-field-main', 'pin-field-confirm'].forEach(id => { document.getElementById(id).value = ''; });
+            setPinMessage('');
+        }
+
+        function unlockTeacher() {
+            teacherUnlocked = true;
+            closeTeacherPinDialog();
+            switchTab('profesor');
+        }
+
+        function exitTeacherMode() {
+            teacherUnlocked = false;
+            teacherReports = [];
+            renderTeacherView();
+            closeTeacherPinDialog();
+            switchTab('cargar');
+        }
+
+        async function submitTeacherPin() {
+            if (teacherPinBusy) return;
+            const pin = document.getElementById('pin-field-main').value;
+            const confirmPin = document.getElementById('pin-field-confirm').value;
+            const current = document.getElementById('pin-field-current').value;
+            teacherPinBusy = true;
+            try {
+                if (teacherPinMode === 'reset') {
+                    safeRemoveItem(TEACHER_PIN_KEY);
+                    safeRemoveItem(TEACHER_LOCK_KEY);
+                    teacherReports = [];
+                    teacherUnlocked = false;
+                    configurePinDialog('create');
+                    setPinMessage('PIN borrado de este dispositivo. Crea uno nuevo.', 'ok');
+                    return;
+                }
+                if (!teacherCryptoAvailable()) return;
+
+                if (teacherPinMode === 'create' || teacherPinMode === 'change') {
+                    if (teacherPinMode === 'create' && getStoredTeacherPin()) { configurePinDialog('unlock'); return; }
+                    if (teacherPinMode === 'change' && !(await verifyTeacherPin(current))) {
+                        setPinMessage('El PIN actual no es correcto.');
+                        return;
+                    }
+                    if (pin.length < TEACHER_PIN_MIN) { setPinMessage(`El PIN debe tener al menos ${TEACHER_PIN_MIN} caracteres.`); return; }
+                    if (pin !== confirmPin) { setPinMessage('Los dos PIN no coinciden.'); return; }
+                    if (!(await storeTeacherPin(pin))) { setPinMessage('No se pudo guardar el PIN en este navegador.'); return; }
+                    safeRemoveItem(TEACHER_LOCK_KEY);
+                    if (teacherPinMode === 'change') {
+                        closeTeacherPinDialog();
+                        showToast('PIN cambiado.');
+                    } else {
+                        unlockTeacher();
+                    }
+                    return;
+                }
+
+                // modo desbloqueo
+                const lock = getTeacherLock();
+                if (lock.until > Date.now()) {
+                    setPinMessage(`Demasiados intentos. Espera ${Math.ceil((lock.until - Date.now()) / 1000)} s.`, 'warn');
+                    return;
+                }
+                if (!pin) { setPinMessage('Escribe el PIN.'); return; }
+                if (await verifyTeacherPin(pin)) {
+                    safeRemoveItem(TEACHER_LOCK_KEY);
+                    unlockTeacher();
+                } else {
+                    const l = registerTeacherFail();
+                    document.getElementById('pin-field-main').value = '';
+                    if (l.until > Date.now()) setPinMessage(`PIN incorrecto. Demasiados intentos: espera ${Math.ceil((l.until - Date.now()) / 1000)} s.`, 'warn');
+                    else setPinMessage(`PIN incorrecto. Te quedan ${TEACHER_FREE_ATTEMPTS - l.fails} intento(s) antes de la espera.`);
+                }
+            } catch (err) {
+                console.error(err);
+                setPinMessage('No se pudo comprobar el PIN en este navegador.');
+            } finally {
+                teacherPinBusy = false;
+            }
+        }
+
+        let pinResetPending = false;
+        function handleTeacherPinReset() {
+            const btn = document.getElementById('pin-forgot-btn');
+            if (!pinResetPending) {
+                pinResetPending = true;
+                btn.innerText = 'Pulsa otra vez para restablecer el acceso en este dispositivo';
+                setTimeout(() => { pinResetPending = false; btn.innerText = '¿Has olvidado el PIN?'; }, 4000);
+                return;
+            }
+            pinResetPending = false;
+            btn.innerText = '¿Has olvidado el PIN?';
+            configurePinDialog('reset');
+        }
+
+        // Gesto discreto: 5 toques en el logo/título en menos de 3 s
+        let brandTapTimes = [];
+        function handleBrandTap() {
+            const now = Date.now();
+            brandTapTimes = brandTapTimes.filter(t => now - t < 3000);
+            brandTapTimes.push(now);
+            if (brandTapTimes.length >= 5) {
+                brandTapTimes = [];
+                openTeacherPinDialog();
+            }
+        }
+
+        function initTeacherSecretEntry() {
+            const brand = document.getElementById('app-brand');
+            if (brand) brand.addEventListener('click', handleBrandTap);
+            document.addEventListener('keydown', e => {
+                const k = (e.key || '').toLowerCase();
+                if (k === 'p' && (e.ctrlKey || e.metaKey) && (e.shiftKey || e.altKey)) {
+                    e.preventDefault();
+                    openTeacherPinDialog();
+                } else if (e.key === 'Escape' && !document.getElementById('teacher-pin-modal').classList.contains('hidden')) {
+                    closeTeacherPinDialog();
+                }
+            });
+            try { sessionStorage.removeItem('sm_teacher_session'); } catch (e) { /* nada */ }
         }
 
         // =========================================================
@@ -4286,6 +4587,7 @@ El ciclo hidrológico permite que el agua circule continuamente por la hidrosfer
         // 16. INICIALIZACIÓN AL CARGAR LA PÁGINA
         // =========================================================
         window.addEventListener('DOMContentLoaded', () => {
+            initTeacherSecretEntry();
             updateXP(0);
             renderSavedDecksList();
             // REVISIÓN: se recupera el último temario abierto (antes, al recargar se perdía todo)

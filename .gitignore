@@ -1,1 +1,4 @@
 node_modules/
+tools/dl/
+tools/screenshot_*.png
+tools/package-lock.json
